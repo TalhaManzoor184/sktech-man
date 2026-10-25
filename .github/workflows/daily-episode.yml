@@ -1,0 +1,107 @@
+name: Daily Sketch Man meme
+
+on:
+  schedule:
+    # 12:13 UTC = 5:13 PM Pakistan time. The Short is uploaded private and YouTube makes it
+    # public at PUBLISH_TIME (7:00 PM PKT = 10 AM New York, 3 PM London). GitHub can start cron
+    # jobs late at busy times, so the ~2-hour gap keeps the slot safe.
+    - cron: "13 12 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "full = real episode, public at PUBLISH_TIME · publish-now = public immediately · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE, checks YouTube keys"
+        type: choice
+        options: [full, publish-now, no-upload, test, upload-test]
+        default: test
+
+permissions:
+  contents: write # to commit data/history.json
+
+concurrency:
+  group: daily-episode
+  cancel-in-progress: false
+
+env:
+  # Change these in Settings → Secrets and variables → Actions → Variables.
+  UPLOAD_MODE: ${{ vars.UPLOAD_MODE || 'schedule' }}
+  PUBLISH_TIME: ${{ vars.PUBLISH_TIME || '19:00' }}
+  PUBLISH_UTC_OFFSET: ${{ vars.PUBLISH_UTC_OFFSET || '5' }}
+  PUBLISH_DELAY_DAYS: ${{ vars.PUBLISH_DELAY_DAYS || '0' }}
+  TTS_PROVIDER: ${{ vars.TTS_PROVIDER || 'gemini' }}
+  SKETCH_VOICE: ${{ vars.SKETCH_VOICE || 'Puck' }}
+  BRO_VOICE: ${{ vars.BRO_VOICE || 'Fenrir' }}
+  MADE_FOR_KIDS: ${{ vars.MADE_FOR_KIDS || 'false' }}
+  SCRIPT_PROVIDER: ${{ vars.SCRIPT_PROVIDER || 'gemini' }}
+  TRENDS: ${{ vars.TRENDS || 'on' }}
+  CONTENT_LANGUAGE: ${{ vars.CONTENT_LANGUAGE || 'English' }}
+  TTS_LANGUAGE: ${{ vars.TTS_LANGUAGE || 'en-US' }}
+  VIDEO_LANGUAGE: ${{ vars.VIDEO_LANGUAGE || 'en' }}
+  AUDIENCE: ${{ vars.AUDIENCE }}
+  WATERMARK: ${{ vars.WATERMARK || '@sketchman' }}
+  GEMINI_TEXT_MODEL: ${{ vars.GEMINI_TEXT_MODEL }}
+  ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+
+jobs:
+  episode:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install system tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg espeak-ng \
+            libnss3 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 libgbm1 libasound2t64 \
+            libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 libpango-1.0-0 libcairo2 libcups2t64
+          curl -sSL -o /tmp/rhubarb.zip https://github.com/DanielSWolf/rhubarb-lip-sync/releases/download/v1.13.0/Rhubarb-Lip-Sync-1.13.0-Linux.zip
+          unzip -q /tmp/rhubarb.zip -d /opt
+          echo "RHUBARB_PATH=/opt/Rhubarb-Lip-Sync-1.13.0-Linux/rhubarb" >> "$GITHUB_ENV"
+
+      - run: npm ci
+
+      - name: Make episode
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+          ELEVENLABS_BRO_VOICE_ID: ${{ secrets.ELEVENLABS_BRO_VOICE_ID }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          MODE: ${{ github.event_name == 'schedule' && 'full' || inputs.mode }}
+        run: |
+          case "$MODE" in
+            test)        npm run episode -- --sample --tts=espeak --no-upload ;;
+            no-upload)   npm run episode -- --no-upload ;;
+            publish-now) UPLOAD_MODE=public npm run episode ;;
+            upload-test) UPLOAD_MODE=private npm run episode -- --sample --tts=espeak ;;
+            *)           npm run episode ;;
+          esac
+
+      - name: Keep the video for 14 days
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: episode-${{ github.run_number }}
+          path: |
+            out/*/episode.mp4
+            out/*/script.json
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Save episode history
+        run: |
+          git config user.name "sketchman-bot"
+          git config user.email "sketchman-bot@users.noreply.github.com"
+          git add data/history.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Episode $(date -u +%F)"
+            git push
+          fi

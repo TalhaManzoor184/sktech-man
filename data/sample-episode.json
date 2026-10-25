@@ -1,0 +1,15 @@
+{
+  "title": "When bro says \"trust me\" in the exam 😭 #shorts",
+  "description": "Sketch Man has one question left and one very confident friend.",
+  "tags": ["relatable", "exam", "school meme", "funny animation", "meme", "best friend", "copying answers", "student life", "cartoon comedy", "shorts"],
+  "theme": "copying a friend's answer in the exam",
+  "pov": "POV: you ask your friend for the answer during the exam",
+  "scene": "classroom",
+  "beats": [
+    { "speaker": "sketch", "line": "Psst! Bro! What did you get for question five?", "expression": "thinking", "action": "think", "prop": "pencil", "sfx": "none", "otherExpression": "happy" },
+    { "speaker": "bro", "line": "Seventy two. Trust me, I'm a genius.", "expression": "cool", "action": "thumbsUp", "prop": "none", "sfx": "ding", "otherExpression": "happy" },
+    { "speaker": "sketch", "line": "Yes! Writing it down. Seventy two.", "expression": "happy", "action": "idle", "prop": "book", "sfx": "none", "otherExpression": "cool" },
+    { "speaker": "bro", "line": "Wait. Question five was the one about your name.", "expression": "surprised", "action": "point", "prop": "none", "sfx": "none", "otherExpression": "happy" },
+    { "speaker": "sketch", "line": "", "expression": "surprised", "action": "idle", "prop": "book", "sfx": "boom", "otherExpression": "laughing" }
+  ]
+}
