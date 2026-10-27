@@ -3,8 +3,8 @@ import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { WordTiming } from "../shared/episode";
-import { durationOf, ffmpeg, toEpisodeWav } from "./audio";
+import type { Expression, Speaker, WordTiming } from "../shared/episode";
+import { durationOf, ffmpeg, normalizeTake, stretchFilters, toEpisodeWav } from "./audio";
 import { config, req } from "./config";
 import { shouldFallBack, withRetry } from "./retry";
 
@@ -190,14 +190,14 @@ const wordCount = (s: string) => s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.te
 /**
  * Measure how fast the voice actually talks (words per second over all of a character's lines)
  * and slow every clip down by the same factor until it matches config.targetWps.
- * Never speeds up, never slows below 0.65× (atempo starts to sound smeared past that).
+ * Never speeds up, never slows below 0.8× (stretching more than that starts to sound artificial).
  */
 async function pace(voiced: Voiced[], lines: string[], who: string): Promise<Voiced[]> {
   const words = lines.reduce((a, l) => a + wordCount(l), 0);
   const secs = voiced.reduce((a, x) => a + x.duration, 0);
   if (!words || !secs) return voiced;
   const before = words / secs;
-  const factor = Math.max(0.65, Math.min(1, config.targetWps / before));
+  const factor = Math.max(0.8, Math.min(1, config.targetWps / before));
   if (factor > 0.985) {
     console.log(`  ${who} pace: ${before.toFixed(2)} words/s (target ${config.targetWps}), unchanged`);
     return voiced;
@@ -205,7 +205,7 @@ async function pace(voiced: Voiced[], lines: string[], who: string): Promise<Voi
   const out: Voiced[] = [];
   for (const x of voiced) {
     const tmp = x.wavPath.replace(/\.wav$/, ".pace.wav");
-    await ffmpeg(["-i", x.wavPath, "-af", `atempo=${factor.toFixed(4)}`, "-ar", "44100", "-ac", "1", tmp]);
+    await ffmpeg(["-i", x.wavPath, "-af", (await stretchFilters(factor)).join(",") || "anull", "-ar", "44100", "-ac", "1", tmp]);
     await fs.rename(tmp, x.wavPath);
     const duration = await durationOf(x.wavPath);
     const k = duration / Math.max(0.01, x.duration);
@@ -227,7 +227,10 @@ async function voiceRaw(lines: string[], outWavs: string[], v: VoiceSpec): Promi
   if (!lines.length) return [];
   if (config.ttsProvider === "gemini" && lines.length > 1) {
     const raw = path.join(path.dirname(outWavs[0]), `voice-${v.gemini}.raw.wav`);
-    await gemini(lines.join("\n<short pause>\n"), raw, v);
+    await gemini(lines.join("\n"), raw, v);
+    const take = raw.replace(/\.raw\.wav$/, ".take.wav");
+    await normalizeTake(raw, take);
+    await fs.rename(take, raw);
     const total = await durationOf(raw);
     const cuts = chooseCuts(await findSilences(raw), lines, total);
     if (cuts) {
@@ -236,7 +239,7 @@ async function voiceRaw(lines: string[], outWavs: string[], v: VoiceSpec): Promi
       for (const [i, out] of outWavs.entries()) {
         const seg = out.replace(/\.wav$/, ".seg.wav");
         await ffmpeg(["-i", raw, "-ss", bounds[i].toFixed(3), "-to", bounds[i + 1].toFixed(3), seg]);
-        await toEpisodeWav(seg, out, v.pitch, v.speed);
+        await toEpisodeWav(seg, out, v.pitch, v.speed, false);
         await fs.rm(seg, { force: true });
         const duration = await durationOf(out);
         voiced.push({ wavPath: out, duration, words: estimateWords(lines[i], duration) });
@@ -275,4 +278,123 @@ export async function voiceLine(text: string, outWav: string, v: VoiceSpec): Pro
     words = estimateWords(text, duration);
   }
   return { wavPath: outWav, duration, words };
+}
+
+/* ---------- two-character dialogue in one take ---------- */
+
+/** How each face should sound. Sent with every line so the delivery matches the animation. */
+const EMOTION: Record<Expression, string> = {
+  happy: "cheerful and upbeat, smiling while talking",
+  laughing: "amused, laughing a little while saying it",
+  surprised: "genuinely shocked, a quick surprised gasp in the voice",
+  thinking: "thoughtful and unsure, a little hesitant",
+  wink: "sly and playful, a bit smug",
+  sad: "disappointed and deflated, with a small sigh",
+  angry: "frustrated and annoyed, exasperated",
+  cool: "smug and confident, totally relaxed",
+};
+
+const NAME: Record<Speaker, string> = { sketch: "Sketch", bro: "Bro" };
+
+export type DialogueLine = { speaker: Speaker; line: string; expression: Expression };
+
+/**
+ * Voice the whole skit as ONE natural conversation (Gemini multi-speaker), with an emotion
+ * direction per line, then cut it into lines at the pauses. Returns null if Gemini refuses the
+ * request or the cut fails, so the caller can fall back to voicing each character separately.
+ */
+export async function voiceDialogue(items: DialogueLine[], outWavs: string[], voices: Record<Speaker, VoiceSpec>): Promise<Voiced[] | null> {
+  if (config.ttsProvider !== "gemini" || items.length < 2) return null;
+  const speakers = [...new Set(items.map((i) => i.speaker))];
+  const multi = speakers.length > 1;
+
+  // Text: one line per turn. Multi-speaker needs "Name: text" so the model knows who speaks.
+  let text = "";
+  const annotations: Record<string, unknown>[] = [];
+  for (const [k, it] of items.entries()) {
+    const prefix = multi ? `${NAME[it.speaker]}: ` : "";
+    const start = Buffer.byteLength(text + prefix);
+    text += prefix + it.line;
+    const end = Buffer.byteLength(text);
+    annotations.push({
+      type: "speech_metadata",
+      ...(multi ? { speaker: NAME[it.speaker] } : {}),
+      style: `${voices[it.speaker].style}. This line: ${EMOTION[it.expression]}.`,
+      start_index: start,
+      end_index: end,
+    });
+    if (k < items.length - 1) text += "\n";
+  }
+  const direction =
+    "Two friends talking in a funny cartoon skit. Sound like real people in a casual conversation: natural rhythm, " +
+    "natural breaths, small reactions, real emotion. Not an announcer, not reading a script. Relaxed pace with a short pause between turns.";
+
+  const dir = path.dirname(outWavs[0]);
+  const raw = path.join(dir, "dialogue.raw.wav");
+  const take = path.join(dir, "dialogue.take.wav");
+  const call = (model: string) =>
+    withRetry(`dialogue (${model})`, async () => {
+      const ai = new GoogleGenAI({ apiKey: req("GEMINI_API_KEY") });
+      const interaction = await ai.interactions.create({
+        model,
+        input: [
+          {
+            type: "user_input",
+            content: [{ type: "text", text, annotations: [{ type: "speech_metadata", style: direction }, ...annotations] as never }],
+          },
+        ],
+        response_format: { type: "audio", mime_type: "audio/wav" },
+        generation_config: {
+          speech_config: speakers.map((s) => ({
+            ...(multi ? { speaker: NAME[s] } : {}),
+            voice: voices[s].gemini,
+            language: config.ttsLanguage,
+          })),
+        },
+      });
+      const data = interaction.output_audio?.data;
+      if (!data) throw new Error("Gemini returned no audio for the dialogue.");
+      await fs.writeFile(raw, Buffer.from(data, "base64"));
+    });
+
+  try {
+    try {
+      await call(config.geminiModel);
+    } catch (err) {
+      if (!shouldFallBack(err) || !config.geminiTtsFallback) throw err;
+      console.warn(`  ${config.geminiModel} is busy or out of quota; using ${config.geminiTtsFallback}`);
+      await call(config.geminiTtsFallback);
+    }
+    await normalizeTake(raw, take);
+    const total = await durationOf(take);
+    const cuts = chooseCuts(await findSilences(take), items.map((i) => i.line), total);
+    if (!cuts) {
+      console.warn("  Dialogue take: could not find a pause between every line; voicing each character separately.");
+      return null;
+    }
+    const bounds = [0, ...cuts, total];
+    const voiced: Voiced[] = [];
+    for (const [i, out] of outWavs.entries()) {
+      const seg = out.replace(/\.wav$/, ".seg.wav");
+      await ffmpeg(["-i", take, "-ss", bounds[i].toFixed(3), "-to", bounds[i + 1].toFixed(3), seg]);
+      const v = voices[items[i].speaker];
+      await toEpisodeWav(seg, out, v.pitch, v.speed, false);
+      await fs.rm(seg, { force: true });
+      const duration = await durationOf(out);
+      voiced.push({ wavPath: out, duration, words: estimateWords(items[i].line, duration) });
+    }
+    // Bring each character to the target pace (same factor for all of that character's lines).
+    for (const s of speakers) {
+      const idx = items.map((it, i) => (it.speaker === s ? i : -1)).filter((i) => i >= 0);
+      const paced = await pace(idx.map((i) => voiced[i]), idx.map((i) => items[i].line), s);
+      idx.forEach((i, k) => (voiced[i] = paced[k]));
+    }
+    console.log(`  Dialogue take: ${multi ? "two voices" : "one voice"}, one conversation, ${items.length} lines`);
+    return voiced;
+  } catch (err) {
+    console.warn(`  Dialogue take failed (${String((err as Error)?.message ?? err).slice(0, 200)}); voicing each character separately.`);
+    return null;
+  } finally {
+    await Promise.all([raw, take].map((f) => fs.rm(f, { force: true })));
+  }
 }

@@ -23,7 +23,7 @@ so there is nothing to license.
 | `src/remotion/Episode.tsx` | The video: POV banner, captions, camera punch-ins, the "boom" face zoom. |
 | `src/pipeline/trends.ts` | Asks Gemini with Google Search what's trending this week. Never fails the run. |
 | `src/pipeline/script.ts` | Writes the skit (Gemini default, or Claude). |
-| `src/pipeline/tts.ts` | Voices: one Gemini request per character, cut at the pauses. |
+| `src/pipeline/tts.ts` | Voices: the whole skit as one two-voice Gemini conversation with an emotion per line, cut at the pauses and paced to `TARGET_WPS`. Falls back to one take per character. |
 | `src/pipeline/sfx.ts` | Synthesised meme sound effects. |
 | `data/history.json` | Past episodes so themes don't repeat. Committed back by the workflow. |
 | `data/sample-episode.json` | A hand-written episode for testing without keys. |
@@ -56,6 +56,7 @@ npm run episode                   # full run
      `PUBLISH_TIME`, `PUBLISH_DELAY_DAYS`, `WATERMARK`, `TRENDS`,
      `TARGET_WPS` (speaking pace in words/second: 2.2 slow, 2.5 default, 3.0 normal chat), `BEAT_GAP` (pause between lines, default 0.6 s)
 4. Actions → **Daily Sketch Man meme** → Run workflow: `test` first, then `no-upload`, then `full`.
+   `private-upload` uploads a real episode as private (it never goes public on its own), handy for checking voices in YouTube Studio.
 
 ## Daily schedule
 

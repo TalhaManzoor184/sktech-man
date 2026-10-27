@@ -71,6 +71,7 @@ Write today's episode. Requirements:
 - The joke must land without sound too: the POV text sets it up, faces and actions sell it.
 - Beat 1 is the hook and must be funny or intriguing within 2 seconds. Build fast to a twist or punchline.
 - End right after the punchline reaction (no wrap-up line, no catchphrase) so the Short loops.
+- Write lines the way people actually talk out loud: contractions, short sentences, interruptions ("wait—"), the odd "uh", "bro…" or "no no no". No formal or written-sounding sentences, no ALL CAPS.
 - Total spoken words 20–50. Fewer, funnier lines beat many fast ones; the viewer must be able to read the captions.
 - Match expression, action, prop and sfx to each line. Use at most 3 sound effects.
 - Do not ask viewers to like, comment or subscribe. No hashtags except #shorts in the title.`;

@@ -9,7 +9,7 @@ import { renderEpisode } from "./render";
 import { writeScript } from "./script";
 import { makeSfx } from "./sfx";
 import { trendingNotes } from "./trends";
-import { voiceEpisode, type Voiced } from "./tts";
+import { voiceDialogue, voiceEpisode, type Voiced } from "./tts";
 import { uploadShort } from "./upload";
 
 /**
@@ -83,7 +83,18 @@ async function main() {
 
   // 2. Voices: one request per character (all of their lines at once), then lip sync per line.
   const voiced = new Map<number, Voiced & { file: string }>();
-  for (const who of ["sketch", "bro"] as Speaker[]) {
+  const fileFor = (i: number) => `line-${String(i + 1).padStart(2, "0")}.wav`;
+  // First try: the whole skit as one natural two-voice conversation.
+  const spoken = script.beats.map((b, i) => (b.line.trim() ? i : -1)).filter((i) => i >= 0);
+  const dialogue = await voiceDialogue(
+    spoken.map((i) => ({ speaker: script.beats[i].speaker, line: script.beats[i].line, expression: script.beats[i].expression })),
+    spoken.map((i) => path.join(publicDir, fileFor(i))),
+    config.voices,
+  );
+  if (dialogue) spoken.forEach((beatIndex, k) => voiced.set(beatIndex, { ...dialogue[k], file: fileFor(beatIndex) }));
+  notice("Voice mode", dialogue ? "one natural two-voice dialogue take with per-line emotion" : "fallback: one take per character");
+  // Fallback: each character in their own take.
+  for (const who of (dialogue ? [] : ["sketch", "bro"]) as Speaker[]) {
     const idx = script.beats.map((b, i) => (b.speaker === who && b.line.trim() ? i : -1)).filter((i) => i >= 0);
     if (!idx.length) continue;
     const files = idx.map((i) => `line-${String(i + 1).padStart(2, "0")}.wav`);

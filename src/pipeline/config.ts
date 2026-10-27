@@ -43,19 +43,19 @@ export const config = {
   voices: {
     sketch: {
       gemini: opt("SKETCH_VOICE", "Puck"),
-      style: opt("SKETCH_STYLE", "nerdy young guy telling a funny story to a friend; expressive, dramatic and funny, but speaking SLOWLY and clearly, with a short pause after every sentence; never rushed"),
+      style: opt("SKETCH_STYLE", "Sketch is a nerdy, slightly dramatic young guy; warm, expressive and natural, like talking to his best friend"),
       elevenId: opt("ELEVENLABS_VOICE_ID"),
       espeakPitch: "60",
-      pitch: Number(opt("SKETCH_PITCH", "1.05")),
+      pitch: Number(opt("SKETCH_PITCH", "1.0")),
       /** Extra manual slow-down on top of the automatic pacing. 1.0 = none. */
       speed: Number(opt("VOICE_SPEED", "1.0")),
     } satisfies VoiceSpec,
     bro: {
       gemini: opt("BRO_VOICE", "Fenrir"),
-      style: opt("BRO_STYLE", "laid-back, overconfident best friend; deadpan and smug; speaks SLOWLY and lazily, with pauses between sentences; never rushed"),
+      style: opt("BRO_STYLE", "Bro is a laid-back, overconfident best friend; easygoing, deadpan, a little smug, natural and casual"),
       elevenId: opt("ELEVENLABS_BRO_VOICE_ID"),
       espeakPitch: "30",
-      pitch: Number(opt("BRO_PITCH", "0.95")),
+      pitch: Number(opt("BRO_PITCH", "1.0")),
       speed: Number(opt("VOICE_SPEED", "1.0")),
     } satisfies VoiceSpec,
   },
