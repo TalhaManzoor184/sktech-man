@@ -92,7 +92,7 @@ async function main() {
     config.voices,
   );
   if (dialogue) spoken.forEach((beatIndex, k) => voiced.set(beatIndex, { ...dialogue[k], file: fileFor(beatIndex) }));
-  notice("Voice mode", dialogue ? "one natural two-voice dialogue take with per-line emotion" : "fallback: one take per character");
+  notice("Voice mode", dialogue ? "one natural dialogue take with per-line emotion" : "fallback: one take per character");
   // Fallback: each character in their own take.
   for (const who of (dialogue ? [] : ["sketch", "bro"]) as Speaker[]) {
     const idx = script.beats.map((b, i) => (b.speaker === who && b.line.trim() ? i : -1)).filter((i) => i >= 0);
