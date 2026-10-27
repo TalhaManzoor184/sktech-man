@@ -16,11 +16,12 @@ export async function durationOf(file: string): Promise<number> {
  * Normalise any TTS output to 44.1 kHz mono WAV, optionally pitch-shifted (tempo kept),
  * trimmed of leading/trailing silence, with loudness levelled for Shorts.
  */
-export async function toEpisodeWav(input: string, output: string, pitch = 1): Promise<void> {
+export async function toEpisodeWav(input: string, output: string, pitch = 1, speed = 1): Promise<void> {
   const filters: string[] = [];
-  if (pitch && Math.abs(pitch - 1) > 0.001) {
-    filters.push(`asetrate=44100*${pitch}`, "aresample=44100", `atempo=${(1 / pitch).toFixed(4)}`);
-  }
+  // asetrate raises pitch AND speed; atempo then sets the final speed (pitch stays raised).
+  const tempo = Math.min(2, Math.max(0.5, speed / (pitch || 1)));
+  if (pitch && Math.abs(pitch - 1) > 0.001) filters.push(`asetrate=44100*${pitch}`, "aresample=44100");
+  if (Math.abs(tempo - 1) > 0.001) filters.push(`atempo=${tempo.toFixed(4)}`);
   filters.push(
     "silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05",
     "areverse",

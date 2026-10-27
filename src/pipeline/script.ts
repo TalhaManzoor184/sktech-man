@@ -28,13 +28,13 @@ const EPISODE_SCHEMA = {
     scene: { type: "string", enum: Scene.options },
     beats: {
       type: "array",
-      description: "4–9 beats in order. The skit is 12–30 seconds.",
+      description: "4–7 beats in order. The skit is 15–30 seconds.",
       items: {
         type: "object",
         required: ["speaker", "line", "expression", "action", "prop", "sfx"],
         properties: {
           speaker: { type: "string", enum: Speaker.options },
-          line: { type: "string", description: "What the speaker says: 2–14 words, punchy. Use \"\" for a silent reaction shot (max 2 per episode)." },
+          line: { type: "string", description: "What the speaker says: 2–10 words, punchy. Use \"\" for a silent reaction shot (max 2 per episode)." },
           expression: { type: "string", enum: E },
           action: { type: "string", enum: A },
           prop: { type: "string", enum: Prop.options },
@@ -71,7 +71,7 @@ Write today's episode. Requirements:
 - The joke must land without sound too: the POV text sets it up, faces and actions sell it.
 - Beat 1 is the hook and must be funny or intriguing within 2 seconds. Build fast to a twist or punchline.
 - End right after the punchline reaction (no wrap-up line, no catchphrase) so the Short loops.
-- Total spoken words 25–70.
+- Total spoken words 20–50. Fewer, funnier lines beat many fast ones; the viewer must be able to read the captions.
 - Match expression, action, prop and sfx to each line. Use at most 3 sound effects.
 - Do not ask viewers to like, comment or subscribe. No hashtags except #shorts in the title.`;
 }

@@ -41,17 +41,20 @@ export const config = {
   voices: {
     sketch: {
       gemini: opt("SKETCH_VOICE", "Puck"),
-      style: opt("SKETCH_STYLE", "nerdy, fast-talking, easily panicked young guy with sitcom comic timing; expressive and funny, not too fast"),
+      style: opt("SKETCH_STYLE", "nerdy, easily panicked young guy with sitcom comic timing; expressive and funny; speaks at a relaxed, clear pace with natural pauses, never rushed"),
       elevenId: opt("ELEVENLABS_VOICE_ID"),
       espeakPitch: "60",
       pitch: Number(opt("SKETCH_PITCH", "1.05")),
+      /** 1.0 = as generated. Below 1 slows the voice down (0.85–0.95 is natural). */
+      speed: Number(opt("VOICE_SPEED", "0.9")),
     } satisfies VoiceSpec,
     bro: {
       gemini: opt("BRO_VOICE", "Fenrir"),
-      style: opt("BRO_STYLE", "laid-back, overconfident best friend; deadpan, slow and smug, very funny"),
+      style: opt("BRO_STYLE", "laid-back, overconfident best friend; deadpan and smug, very funny; slow, relaxed delivery with pauses"),
       elevenId: opt("ELEVENLABS_BRO_VOICE_ID"),
       espeakPitch: "30",
       pitch: Number(opt("BRO_PITCH", "0.95")),
+      speed: Number(opt("VOICE_SPEED", "0.9")),
     } satisfies VoiceSpec,
   },
 

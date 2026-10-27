@@ -117,8 +117,8 @@ async function main() {
     beats,
     musicFile: await pickMusic(publicDir),
     fps: FPS,
-    gapSeconds: 0.22,
-    outroSeconds: 0.5,
+    gapSeconds: Number(process.env.BEAT_GAP?.trim() || "0.5"),
+    outroSeconds: 0.9,
     watermark: config.watermark,
   };
   await fs.writeFile(path.join(runDir, "props.json"), JSON.stringify(props, null, 2));

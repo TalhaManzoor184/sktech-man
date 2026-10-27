@@ -13,7 +13,7 @@ const run = promisify(execFile);
 export type Voiced = { wavPath: string; duration: number; words: WordTiming[] };
 
 /** Which voice to use. Each character has its own. */
-export type VoiceSpec = { gemini: string; style: string; elevenId?: string; espeakPitch: string; pitch: number };
+export type VoiceSpec = { gemini: string; style: string; elevenId?: string; espeakPitch: string; pitch: number; speed: number };
 
 /** Spread words across the clip by character length. Used when the provider gives no timings. */
 function estimateWords(text: string, duration: number): WordTiming[] {
@@ -197,7 +197,7 @@ export async function voiceEpisode(lines: string[], outWavs: string[], v: VoiceS
       for (const [i, out] of outWavs.entries()) {
         const seg = out.replace(/\.wav$/, ".seg.wav");
         await ffmpeg(["-i", raw, "-ss", bounds[i].toFixed(3), "-to", bounds[i + 1].toFixed(3), seg]);
-        await toEpisodeWav(seg, out, v.pitch);
+        await toEpisodeWav(seg, out, v.pitch, v.speed);
         await fs.rm(seg, { force: true });
         const duration = await durationOf(out);
         voiced.push({ wavPath: out, duration, words: estimateWords(lines[i], duration) });
@@ -220,7 +220,7 @@ export async function voiceLine(text: string, outWav: string, v: VoiceSpec): Pro
   const timings = await provider(text, raw, v);
 
   const rawDuration = await durationOf(raw);
-  await toEpisodeWav(raw, outWav, v.pitch);
+  await toEpisodeWav(raw, outWav, v.pitch, v.speed);
   await fs.rm(raw, { force: true });
   const duration = await durationOf(outWav);
 

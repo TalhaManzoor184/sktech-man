@@ -53,7 +53,8 @@ npm run episode                   # full run
 3. **GitHub** → Settings → Secrets and variables → Actions:
    - Secrets: `GEMINI_API_KEY`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN`
    - Variables (optional): `CONTENT_LANGUAGE`, `TTS_LANGUAGE`, `SKETCH_VOICE`, `BRO_VOICE`,
-     `PUBLISH_TIME`, `PUBLISH_DELAY_DAYS`, `WATERMARK`, `TRENDS`
+     `PUBLISH_TIME`, `PUBLISH_DELAY_DAYS`, `WATERMARK`, `TRENDS`,
+     `VOICE_SPEED` (default 0.9; lower = slower), `BEAT_GAP` (pause between lines, default 0.5 s)
 4. Actions → **Daily Sketch Man meme** → Run workflow: `test` first, then `no-upload`, then `full`.
 
 ## Daily schedule
