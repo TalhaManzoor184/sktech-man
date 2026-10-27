@@ -25,9 +25,20 @@ export const Speaker = z.enum(["sketch", "bro"]);
 export type Speaker = z.infer<typeof Speaker>;
 
 /** One beat of the skit. An empty line is a silent reaction shot. */
+/** Writers sometimes return `""`, "...", "(silence)" or "-" for a silent beat. Treat those as empty. */
+const SpokenLine = z
+  .string()
+  .max(140)
+  .transform((s) => {
+    const t = s.trim();
+    if (/^[\s"'“”‘’.…\-–—*]*$/.test(t)) return "";
+    if (/^[([]\s*(silence|silent|pause|reaction|no line|beat)[^)\]]*[)\]]$/i.test(t)) return "";
+    return t;
+  });
+
 export const Beat = z.object({
   speaker: Speaker,
-  line: z.string().max(140),
+  line: SpokenLine,
   expression: Expression,
   action: Action,
   prop: Prop.default("none"),

@@ -34,7 +34,7 @@ const EPISODE_SCHEMA = {
         required: ["speaker", "line", "expression", "action", "prop", "sfx"],
         properties: {
           speaker: { type: "string", enum: Speaker.options },
-          line: { type: "string", description: "What the speaker says: 2–10 words, punchy. Use \"\" for a silent reaction shot (max 2 per episode)." },
+          line: { type: "string", description: "What the speaker says: 2–10 words, punchy. For a silent reaction shot use an empty string (no characters at all, not quote marks); max 2 per episode." },
           expression: { type: "string", enum: E },
           action: { type: "string", enum: A },
           prop: { type: "string", enum: Prop.options },
