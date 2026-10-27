@@ -30,8 +30,9 @@ env:
   TTS_PROVIDER: ${{ vars.TTS_PROVIDER || 'gemini' }}
   SKETCH_VOICE: ${{ vars.SKETCH_VOICE || 'Puck' }}
   BRO_VOICE: ${{ vars.BRO_VOICE || 'Fenrir' }}
-  VOICE_SPEED: ${{ vars.VOICE_SPEED || '0.9' }}
-  BEAT_GAP: ${{ vars.BEAT_GAP || '0.5' }}
+  TARGET_WPS: ${{ vars.TARGET_WPS || '2.5' }}
+  VOICE_SPEED: ${{ vars.VOICE_SPEED || '1.0' }}
+  BEAT_GAP: ${{ vars.BEAT_GAP || '0.6' }}
   MADE_FOR_KIDS: ${{ vars.MADE_FOR_KIDS || 'false' }}
   SCRIPT_PROVIDER: ${{ vars.SCRIPT_PROVIDER || 'gemini' }}
   TRENDS: ${{ vars.TRENDS || 'on' }}

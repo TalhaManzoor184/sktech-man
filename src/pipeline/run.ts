@@ -91,6 +91,7 @@ async function main() {
       idx.map((i) => script.beats[i].line),
       files.map((f) => path.join(publicDir, f)),
       config.voices[who],
+      who,
     );
     idx.forEach((beatIndex, k) => voiced.set(beatIndex, { ...out[k], file: files[k] }));
   }
@@ -117,7 +118,7 @@ async function main() {
     beats,
     musicFile: await pickMusic(publicDir),
     fps: FPS,
-    gapSeconds: Number(process.env.BEAT_GAP?.trim() || "0.5"),
+    gapSeconds: Number(process.env.BEAT_GAP?.trim() || "0.6"),
     outroSeconds: 0.9,
     watermark: config.watermark,
   };

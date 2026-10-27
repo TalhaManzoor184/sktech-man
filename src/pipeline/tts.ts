@@ -184,7 +184,46 @@ export function chooseCuts(silences: Silence[], lines: string[], total: number):
  * few TTS requests a day) and the audio is cut at the pauses between lines. Other providers, or a
  * failed split, fall back to one request per line.
  */
-export async function voiceEpisode(lines: string[], outWavs: string[], v: VoiceSpec): Promise<Voiced[]> {
+/** Spoken words in a line (for measuring pace). */
+const wordCount = (s: string) => s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+
+/**
+ * Measure how fast the voice actually talks (words per second over all of a character's lines)
+ * and slow every clip down by the same factor until it matches config.targetWps.
+ * Never speeds up, never slows below 0.65× (atempo starts to sound smeared past that).
+ */
+async function pace(voiced: Voiced[], lines: string[], who: string): Promise<Voiced[]> {
+  const words = lines.reduce((a, l) => a + wordCount(l), 0);
+  const secs = voiced.reduce((a, x) => a + x.duration, 0);
+  if (!words || !secs) return voiced;
+  const before = words / secs;
+  const factor = Math.max(0.65, Math.min(1, config.targetWps / before));
+  if (factor > 0.985) {
+    console.log(`  ${who} pace: ${before.toFixed(2)} words/s (target ${config.targetWps}), unchanged`);
+    return voiced;
+  }
+  const out: Voiced[] = [];
+  for (const x of voiced) {
+    const tmp = x.wavPath.replace(/\.wav$/, ".pace.wav");
+    await ffmpeg(["-i", x.wavPath, "-af", `atempo=${factor.toFixed(4)}`, "-ar", "44100", "-ac", "1", tmp]);
+    await fs.rename(tmp, x.wavPath);
+    const duration = await durationOf(x.wavPath);
+    const k = duration / Math.max(0.01, x.duration);
+    out.push({ wavPath: x.wavPath, duration, words: x.words.map((w) => ({ text: w.text, start: w.start * k, end: w.end * k })) });
+  }
+  const after = words / out.reduce((a, x) => a + x.duration, 0);
+  console.log(`  ${who} pace: ${before.toFixed(2)} → ${after.toFixed(2)} words/s (slowed ×${factor.toFixed(2)})`);
+  if (process.env.GITHUB_ACTIONS) console.log(`::notice title=Voice pace ${who}::${before.toFixed(2)} → ${after.toFixed(2)} words per second (slowed x${factor.toFixed(2)})`);
+  return out;
+}
+
+/** Voice one character's lines, then bring them to the target pace. */
+export async function voiceEpisode(lines: string[], outWavs: string[], v: VoiceSpec, who = "voice"): Promise<Voiced[]> {
+  const voiced = await voiceRaw(lines, outWavs, v);
+  return pace(voiced, lines, who);
+}
+
+async function voiceRaw(lines: string[], outWavs: string[], v: VoiceSpec): Promise<Voiced[]> {
   if (!lines.length) return [];
   if (config.ttsProvider === "gemini" && lines.length > 1) {
     const raw = path.join(path.dirname(outWavs[0]), `voice-${v.gemini}.raw.wav`);

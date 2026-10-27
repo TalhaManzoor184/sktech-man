@@ -37,24 +37,26 @@ export const config = {
   /** BCP-47 language for the voice: en-US, en-IN, hi-IN, ur-PK… */
   ttsLanguage: opt("TTS_LANGUAGE", "en-US"),
   elevenModel: opt("ELEVENLABS_MODEL", "eleven_multilingual_v2"),
+  /** Speaking pace every voice is slowed to, in words per second, measured on the trimmed clips. 2.2 = slow, 2.5 = relaxed, 3.0 = normal chat. */
+  targetWps: Number(opt("TARGET_WPS", "2.5")),
 
   voices: {
     sketch: {
       gemini: opt("SKETCH_VOICE", "Puck"),
-      style: opt("SKETCH_STYLE", "nerdy, easily panicked young guy with sitcom comic timing; expressive and funny; speaks at a relaxed, clear pace with natural pauses, never rushed"),
+      style: opt("SKETCH_STYLE", "nerdy young guy telling a funny story to a friend; expressive, dramatic and funny, but speaking SLOWLY and clearly, with a short pause after every sentence; never rushed"),
       elevenId: opt("ELEVENLABS_VOICE_ID"),
       espeakPitch: "60",
       pitch: Number(opt("SKETCH_PITCH", "1.05")),
-      /** 1.0 = as generated. Below 1 slows the voice down (0.85–0.95 is natural). */
-      speed: Number(opt("VOICE_SPEED", "0.9")),
+      /** Extra manual slow-down on top of the automatic pacing. 1.0 = none. */
+      speed: Number(opt("VOICE_SPEED", "1.0")),
     } satisfies VoiceSpec,
     bro: {
       gemini: opt("BRO_VOICE", "Fenrir"),
-      style: opt("BRO_STYLE", "laid-back, overconfident best friend; deadpan and smug, very funny; slow, relaxed delivery with pauses"),
+      style: opt("BRO_STYLE", "laid-back, overconfident best friend; deadpan and smug; speaks SLOWLY and lazily, with pauses between sentences; never rushed"),
       elevenId: opt("ELEVENLABS_BRO_VOICE_ID"),
       espeakPitch: "30",
       pitch: Number(opt("BRO_PITCH", "0.95")),
-      speed: Number(opt("VOICE_SPEED", "0.9")),
+      speed: Number(opt("VOICE_SPEED", "1.0")),
     } satisfies VoiceSpec,
   },
 
