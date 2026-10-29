@@ -370,6 +370,7 @@ export async function voiceDialogue(items: DialogueLine[], outWavs: string[], vo
     const cuts = chooseCuts(await findSilences(take), items.map((i) => i.line), total);
     if (!cuts) {
       console.warn("  Dialogue take: could not find a pause between every line; voicing each character separately.");
+      if (process.env.GITHUB_ACTIONS) console.log("::warning title=Dialogue take::could not find a pause between every line");
       return null;
     }
     const bounds = [0, ...cuts, total];
@@ -392,7 +393,9 @@ export async function voiceDialogue(items: DialogueLine[], outWavs: string[], vo
     console.log(`  Dialogue take: ${multi ? "two voices" : "one voice"}, one conversation, ${items.length} lines`);
     return voiced;
   } catch (err) {
-    console.warn(`  Dialogue take failed (${String((err as Error)?.message ?? err).slice(0, 200)}); voicing each character separately.`);
+    const msg = String((err as Error)?.message ?? err).slice(0, 300);
+    console.warn(`  Dialogue take failed (${msg}); voicing each character separately.`);
+    if (process.env.GITHUB_ACTIONS) console.log(`::warning title=Dialogue take failed::${msg.replace(/[\r\n%]/g, " ")}`);
     return null;
   } finally {
     await Promise.all([raw, take].map((f) => fs.rm(f, { force: true })));
