@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "full = real episode, public at PUBLISH_TIME · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE, checks YouTube keys"
+        description: "full = real episode, public at PUBLISH_TIME · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample saved as a Facebook DRAFT only"
         type: choice
-        options: [full, private-upload, publish-now, no-upload, test, upload-test]
+        options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test]
         default: test
 
 permissions:
@@ -34,6 +34,8 @@ env:
   VOICE_SPEED: ${{ vars.VOICE_SPEED || '1.0' }}
   BEAT_GAP: ${{ vars.BEAT_GAP || '0.6' }}
   MADE_FOR_KIDS: ${{ vars.MADE_FOR_KIDS || 'false' }}
+  # Facebook Reels run whenever FACEBOOK_PAGE_ID and FACEBOOK_PAGE_TOKEN secrets exist. Set FACEBOOK_ENABLED=false to pause.
+  FACEBOOK_ENABLED: ${{ vars.FACEBOOK_ENABLED || 'true' }}
   SCRIPT_PROVIDER: ${{ vars.SCRIPT_PROVIDER || 'gemini' }}
   TRENDS: ${{ vars.TRENDS || 'on' }}
   CONTENT_LANGUAGE: ${{ vars.CONTENT_LANGUAGE || 'English' }}
@@ -78,14 +80,17 @@ jobs:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
           MODE: ${{ github.event_name == 'schedule' && 'full' || inputs.mode }}
         run: |
           case "$MODE" in
             test)        npm run episode -- --sample --tts=espeak --no-upload ;;
             no-upload)   npm run episode -- --no-upload ;;
             publish-now) UPLOAD_MODE=public npm run episode ;;
-            private-upload) UPLOAD_MODE=private npm run episode ;;
-            upload-test) UPLOAD_MODE=private npm run episode -- --sample --tts=espeak ;;
+            private-upload) UPLOAD_MODE=private FACEBOOK_DRAFT=true npm run episode ;;
+            upload-test) UPLOAD_MODE=private FACEBOOK_DRAFT=true npm run episode -- --sample --tts=espeak ;;
+            facebook-test) FACEBOOK_DRAFT=true npm run episode -- --sample --tts=espeak --facebook-only ;;
             *)           npm run episode ;;
           esac
 

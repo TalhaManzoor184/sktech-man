@@ -10,13 +10,16 @@ import { writeScript } from "./script";
 import { makeSfx } from "./sfx";
 import { trendingNotes } from "./trends";
 import { voiceDialogue, voiceEpisode, type Voiced } from "./tts";
+import { facebookConfigured, uploadFacebookReel } from "./facebook";
 import { uploadShort } from "./upload";
 
 /**
  * One full episode: trends → script → voices → lip sync → sound effects → render → upload.
  *
  *   npm run episode                       full daily run
- *   npm run episode -- --no-upload        everything except YouTube
+ *   npm run episode -- --no-upload        everything except uploading
+ *   npm run episode -- --no-facebook      YouTube only
+ *   npm run episode -- --facebook-only    Facebook only (test path, nothing saved to history)
  *   npm run episode -- --sample           skip the writer, use data/sample-episode.json
  *   npm run episode -- --tts=espeak       offline robot voices (testing only)
  *   npm run episode -- --script=path.json use a hand-written script
@@ -144,10 +147,33 @@ async function main() {
   // 4. Upload
   if (args.has("no-upload")) {
     console.log("Upload: skipped (--no-upload)");
+  } else if (args.has("facebook-only")) {
+    if (!facebookConfigured()) throw new Error("Facebook test needs FACEBOOK_PAGE_ID and FACEBOOK_PAGE_TOKEN secrets.");
+    const fb = await uploadFacebookReel(mp4, script);
+    console.log(`Facebook: Reel ${fb.videoId} ${fb.state}`);
+    notice("Facebook test", `Reel ${fb.videoId} ${fb.state}`);
   } else {
     const { videoId, publishAt } = await uploadShort(mp4, script);
     console.log(`Upload: https://youtube.com/shorts/${videoId}${publishAt ? ` (goes public ${publishAt})` : ""}`);
-    await appendHistory({ date, title: script.title, theme: script.theme, videoId, publishAt });
+
+    // Facebook Page Reel, same video, same publish time. Optional: never blocks YouTube or history.
+    let facebookVideoId: string | undefined;
+    if (args.has("no-facebook") || !facebookConfigured()) {
+      console.log(`Facebook: skipped (${args.has("no-facebook") ? "--no-facebook" : "FACEBOOK_ENABLED is false or Facebook secrets are missing"})`);
+    } else {
+      try {
+        const fb = await uploadFacebookReel(mp4, script, publishAt);
+        facebookVideoId = fb.videoId;
+        console.log(`Facebook: Reel ${fb.videoId} ${fb.state}`);
+        notice("Facebook", `Reel ${fb.videoId} ${fb.state}`);
+      } catch (err) {
+        console.error(err);
+        const msg = String((err as Error)?.message ?? err).replace(/[\r\n%]/g, " ");
+        if (process.env.GITHUB_ACTIONS) console.log(`::error title=Facebook upload failed::${msg}`);
+        process.exitCode = 1; // YouTube still went out; fail the run so the Facebook problem gets noticed
+      }
+    }
+    await appendHistory({ date, title: script.title, theme: script.theme, videoId, publishAt, facebookVideoId });
   }
 
   console.log(`Done in ${((Date.now() - t0) / 1000).toFixed(0)}s`);

@@ -80,6 +80,8 @@ export const config = {
   madeForKids: opt("MADE_FOR_KIDS", "false") === "true",
   /** YouTube metadata language, e.g. en, hi, ur. */
   videoLanguage: opt("VIDEO_LANGUAGE", "en"),
+  /** Meta Graph API version for Facebook Reels. */
+  facebookGraphVersion: opt("FACEBOOK_GRAPH_VERSION", "v26.0"),
 
   paths: {
     bible: path.join(ROOT, "character/bible.md"),

@@ -25,6 +25,7 @@ so there is nothing to license.
 | `src/pipeline/script.ts` | Writes the skit (Gemini default, or Claude). |
 | `src/pipeline/tts.ts` | Voices: the whole skit as one two-voice Gemini conversation with an emotion per line, cut at the pauses and paced to `TARGET_WPS`. Falls back to one take per character. |
 | `src/pipeline/sfx.ts` | Synthesised meme sound effects. |
+| `src/pipeline/facebook.ts` | Facebook Page Reels, scheduled to the same time as YouTube. |
 | `data/history.json` | Past episodes so themes don't repeat. Committed back by the workflow. |
 | `data/sample-episode.json` | A hand-written episode for testing without keys. |
 
@@ -57,6 +58,29 @@ npm run episode                   # full run
      `TARGET_WPS` (speaking pace in words/second: 2.2 slow, 2.5 default, 3.0 normal chat), `BEAT_GAP` (pause between lines, default 0.6 s)
 4. Actions → **Daily Sketch Man meme** → Run workflow: `test` first, then `no-upload`, then `full`.
    `private-upload` uploads a real episode as private (it never goes public on its own), handy for checking voices in YouTube Studio.
+
+## Facebook Page Reels
+
+After the YouTube upload, the same video is posted as a Reel on the Sketch Man Facebook Page and
+scheduled for the same 7 PM slot (`publish-now` posts it straight away). Reels can only go to a
+**Page**, not a personal profile.
+
+1. At developers.facebook.com, create an app (use case: *Manage everything on your Page*), or reuse
+   the Sunny app. Add a privacy policy URL and switch the app to **Live**; in Development mode Reels
+   are visible only to people with a role on the app.
+2. Put `FACEBOOK_APP_ID` and `FACEBOOK_APP_SECRET` in `.env`.
+3. In Graph API Explorer, select the app, click *Get User Access Token*, tick `pages_show_list`,
+   `pages_read_engagement` and `pages_manage_posts`, and approve for the **Sketch Man** Page.
+4. Run `npm run auth:facebook` on your computer and paste that token. It lists your Pages; pick
+   Sketch Man. It prints `FACEBOOK_PAGE_ID` and a Page token that never expires (unless you change
+   your Facebook password or remove the app).
+5. Add repository secrets `FACEBOOK_PAGE_ID` and `FACEBOOK_PAGE_TOKEN`.
+6. Run the workflow in `facebook-test` mode: it saves the sample as a **draft** Reel
+   (Meta Business Suite → Content → Drafts) without posting anything.
+
+`private-upload` and `upload-test` also keep Facebook as a draft. Reels are labelled AI-generated
+(`is_ai_generated`). Set the repository variable `FACEBOOK_ENABLED=false` to pause Facebook. If
+Facebook fails, the YouTube upload still counts and the run is marked failed so you get an email.
 
 ## Daily schedule
 
