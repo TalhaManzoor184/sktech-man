@@ -84,9 +84,12 @@ Facebook fails, the YouTube upload still counts and the run is marked failed so 
 
 ## Daily schedule
 
-Runs at **5:13 PM Pakistan time**, uploads private, YouTube makes it public at **7:00 PM PKT**
-(10 AM New York, 3 PM London). Watch it in YouTube Studio → Content → Scheduled before then; set
-`PUBLISH_DELAY_DAYS=1` for a full day to review.
+The workflow tries three times a day (3:13, 4:43 and 6:07 PM PKT) because GitHub often starts
+cron jobs late or skips them. The first run that finds the next 7:00 PM PKT slot empty makes the
+episode, uploads it private and schedules it for 7 PM on YouTube and Facebook; the other runs see
+the slot taken in `data/history.json` and do nothing. A manual `full` run never double-books: if
+today's slot is taken it schedules for the next free day. Watch it in YouTube Studio → Content →
+Scheduled before then; set `PUBLISH_DELAY_DAYS=1` for a full day to review.
 
 ## Desi version
 

@@ -9,14 +9,20 @@ export function youtubeClient() {
   return google.youtube({ version: "v3", auth });
 }
 
-/** Next PUBLISH_TIME (in PUBLISH_UTC_OFFSET local time), PUBLISH_DELAY_DAYS from now, as ISO UTC. */
-export function publishAtIso(now = new Date()): string {
+/**
+ * Next PUBLISH_TIME (in PUBLISH_UTC_OFFSET local time), PUBLISH_DELAY_DAYS from now, as ISO UTC.
+ * Slots listed in `taken` (already used by an earlier episode) are skipped, so two videos never
+ * go public at the same time.
+ */
+export function publishAtIso(now = new Date(), taken: Iterable<string> = []): string {
+  const used = new Set(taken);
   const [hh, mm] = config.publishTime.split(":").map(Number);
   const offsetMs = config.publishUtcOffset * 3600_000;
   const local = new Date(now.getTime() + offsetMs);
   let target = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + config.publishDelayDays, hh, mm) - offsetMs;
   // YouTube rejects times in the past. If today's slot is too close or gone, use the same time tomorrow.
   while (target < now.getTime() + 15 * 60_000) target += 24 * 3600_000;
+  while (used.has(new Date(target).toISOString())) target += 24 * 3600_000;
   return new Date(target).toISOString();
 }
 
@@ -26,9 +32,9 @@ Sketch Man vs. everyday life. A new hand-drawn meme every day.
 
 #Shorts #Relatable #Memes #Animation #SketchMan`;
 
-export async function uploadShort(file: string, script: EpisodeScript): Promise<{ videoId: string; publishAt?: string }> {
+export async function uploadShort(file: string, script: EpisodeScript, takenSlots: string[] = []): Promise<{ videoId: string; publishAt?: string }> {
   const yt = youtubeClient();
-  const publishAt = config.uploadMode === "schedule" ? publishAtIso() : undefined;
+  const publishAt = config.uploadMode === "schedule" ? publishAtIso(new Date(), takenSlots) : undefined;
   const res = await yt.videos.insert({
     part: ["snippet", "status"],
     notifySubscribers: true,

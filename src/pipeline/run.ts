@@ -11,7 +11,7 @@ import { makeSfx } from "./sfx";
 import { trendingNotes } from "./trends";
 import { voiceDialogue, voiceEpisode, type Voiced } from "./tts";
 import { facebookConfigured, uploadFacebookReel } from "./facebook";
-import { uploadShort } from "./upload";
+import { publishAtIso, uploadShort } from "./upload";
 
 /**
  * One full episode: trends → script → voices → lip sync → sound effects → render → upload.
@@ -19,6 +19,7 @@ import { uploadShort } from "./upload";
  *   npm run episode                       full daily run
  *   npm run episode -- --no-upload        everything except uploading
  *   npm run episode -- --no-facebook      YouTube only
+ *   npm run episode -- --if-slot-free     do nothing if the next publish slot already has an episode
  *   npm run episode -- --facebook-only    Facebook only (test path, nothing saved to history)
  *   npm run episode -- --sample           skip the writer, use data/sample-episode.json
  *   npm run episode -- --tts=espeak       offline robot voices (testing only)
@@ -62,6 +63,20 @@ async function main() {
   const t0 = Date.now();
   const date = new Date().toISOString().slice(0, 10);
   const history = await loadHistory();
+  const takenSlots = history.map((h) => h.publishAt).filter((s): s is string => Boolean(s));
+
+  // Scheduled runs fire several times a day because GitHub often starts cron jobs late or not at all.
+  // Only the first one that finds the next publish slot empty makes an episode.
+  if (args.has("if-slot-free")) {
+    const slot = publishAtIso();
+    const taken = history.find((h) => h.publishAt === slot);
+    if (taken) {
+      console.log(`Slot ${slot} already has "${taken.title}". Nothing to do.`);
+      notice("Already scheduled", `${slot} has ${taken.title}`);
+      return;
+    }
+    console.log(`Slot ${slot} is free; making an episode for it.`);
+  }
 
   // 1. Script (with this week's trends)
   let script: EpisodeScript;
@@ -153,7 +168,7 @@ async function main() {
     console.log(`Facebook: Reel ${fb.videoId} ${fb.state}`);
     notice("Facebook test", `Reel ${fb.videoId} ${fb.state}`);
   } else {
-    const { videoId, publishAt } = await uploadShort(mp4, script);
+    const { videoId, publishAt } = await uploadShort(mp4, script, takenSlots);
     console.log(`Upload: https://youtube.com/shorts/${videoId}${publishAt ? ` (goes public ${publishAt})` : ""}`);
 
     // Facebook Page Reel, same video, same publish time. Optional: never blocks YouTube or history.

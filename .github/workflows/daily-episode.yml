@@ -2,14 +2,16 @@ name: Daily Sketch Man meme
 
 on:
   schedule:
-    # 12:13 UTC = 5:13 PM Pakistan time. The Short is uploaded private and YouTube makes it
-    # public at PUBLISH_TIME (7:00 PM PKT = 10 AM New York, 3 PM London). GitHub can start cron
-    # jobs late at busy times, so the ~2-hour gap keeps the slot safe.
-    - cron: "13 12 * * *"
+    # GitHub starts cron jobs late (sometimes hours) or skips them, so try three times before the
+    # 7:00 PM PKT slot: 3:13 PM, 4:43 PM and 6:07 PM PKT. Each run checks data/history.json and
+    # does nothing if the next slot already has an episode, so only one video goes out per day.
+    - cron: "13 10 * * *"
+    - cron: "43 11 * * *"
+    - cron: "7 13 * * *"
   workflow_dispatch:
     inputs:
       mode:
-        description: "full = real episode, public at PUBLISH_TIME · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample saved as a Facebook DRAFT only"
+        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample saved as a Facebook DRAFT only"
         type: choice
         options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test]
         default: test
@@ -82,7 +84,7 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
           FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
-          MODE: ${{ github.event_name == 'schedule' && 'full' || inputs.mode }}
+          MODE: ${{ github.event_name == 'schedule' && 'scheduled' || inputs.mode }}
         run: |
           case "$MODE" in
             test)        npm run episode -- --sample --tts=espeak --no-upload ;;
@@ -91,7 +93,8 @@ jobs:
             private-upload) UPLOAD_MODE=private FACEBOOK_DRAFT=true npm run episode ;;
             upload-test) UPLOAD_MODE=private FACEBOOK_DRAFT=true npm run episode -- --sample --tts=espeak ;;
             facebook-test) FACEBOOK_DRAFT=true npm run episode -- --sample --tts=espeak --facebook-only ;;
-            *)           npm run episode ;;
+            full)        npm run episode ;;
+            *)           npm run episode -- --if-slot-free ;;
           esac
 
       - name: Keep the video for 14 days
