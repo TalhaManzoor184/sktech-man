@@ -1,10 +1,18 @@
 import { bundle } from "@remotion/bundler";
-import { renderMedia, selectComposition } from "@remotion/renderer";
+import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
+import { ffmpeg } from "./audio";
 import type { EpisodeProps } from "../shared/episode";
 import { config } from "./config";
 
+/** Bundles the Remotion project once and reuses it for the video and the stills. */
+const bundles = new Map<string, Promise<string>>();
+function serveUrlFor(publicDir: string): Promise<string> {
+  if (!bundles.has(publicDir)) bundles.set(publicDir, bundle({ entryPoint: config.paths.entry, publicDir }));
+  return bundles.get(publicDir)!;
+}
+
 export async function renderEpisode(props: EpisodeProps, publicDir: string, outFile: string): Promise<void> {
-  const serveUrl = await bundle({ entryPoint: config.paths.entry, publicDir });
+  const serveUrl = await serveUrlFor(publicDir);
   const inputProps = props as unknown as Record<string, unknown>;
   const composition = await selectComposition({
     serveUrl,
@@ -34,4 +42,36 @@ export async function renderEpisode(props: EpisodeProps, publicDir: string, outF
       }
     },
   });
+}
+
+async function still(publicDir: string, id: string, props: Record<string, unknown>, frame: number, png: string): Promise<void> {
+  const serveUrl = await serveUrlFor(publicDir);
+  const composition = await selectComposition({ serveUrl, id, inputProps: props, browserExecutable: config.chromePath });
+  await renderStill({ serveUrl, composition, inputProps: props, frame, output: png, imageFormat: "png", browserExecutable: config.chromePath });
+}
+
+/**
+ * Facebook photo post: the punchline frame, cropped to 4:5 (1080×1350) from the top so the
+ * POV text and the reaction face stay in. Returns the JPEG path.
+ */
+export async function renderMemePhoto(props: EpisodeProps, frame: number, publicDir: string, outJpg: string): Promise<string> {
+  const png = outJpg.replace(/\.jpe?g$/i, ".png");
+  await still(publicDir, "SketchEpisode", props as unknown as Record<string, unknown>, frame, png);
+  await ffmpeg(["-i", png, "-vf", "crop=1080:1350:0:0", "-q:v", "2", outJpg]);
+  return outJpg;
+}
+
+/** Facebook Story image (1080×1920): the hook frame with a "new meme" card. Returns the JPEG path. */
+export async function renderStoryImage(
+  props: EpisodeProps,
+  teaserFrame: number,
+  headline: string,
+  sub: string,
+  publicDir: string,
+  outJpg: string,
+): Promise<string> {
+  const png = outJpg.replace(/\.jpe?g$/i, ".png");
+  await still(publicDir, "StoryTeaser", { ...props, teaserFrame, headline, sub } as unknown as Record<string, unknown>, teaserFrame, png);
+  await ffmpeg(["-i", png, "-q:v", "2", outJpg]);
+  return outJpg;
 }

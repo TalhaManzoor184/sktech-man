@@ -25,7 +25,8 @@ so there is nothing to license.
 | `src/pipeline/script.ts` | Writes the skit (Gemini default, or Claude). |
 | `src/pipeline/tts.ts` | Voices: the whole skit as one two-voice Gemini conversation with an emotion per line, cut at the pauses and paced to `TARGET_WPS`. Falls back to one take per character. |
 | `src/pipeline/sfx.ts` | Synthesised meme sound effects. |
-| `src/pipeline/facebook.ts` | Facebook Page Reels, scheduled to the same time as YouTube. |
+| `src/pipeline/facebook.ts` | Facebook Page: Reel (same time as YouTube), meme photo, and a teaser Story. |
+| `src/remotion/StoryTeaser.tsx` | The Story image: the hook frame with a "new meme" card. |
 | `data/history.json` | Past episodes so themes don't repeat. Committed back by the workflow. |
 | `data/sample-episode.json` | A hand-written episode for testing without keys. |
 
@@ -59,28 +60,36 @@ npm run episode                   # full run
 4. Actions → **Daily Sketch Man meme** → Run workflow: `test` first, then `no-upload`, then `full`.
    `private-upload` uploads a real episode as private (it never goes public on its own), handy for checking voices in YouTube Studio.
 
-## Facebook Page Reels
+## Facebook Page: Reel + photo + Story
 
-After the YouTube upload, the same video is posted as a Reel on the Sketch Man Facebook Page and
-scheduled for the same 7 PM slot (`publish-now` posts it straight away). Reels can only go to a
-**Page**, not a personal profile.
+After the YouTube upload, the Page gets three posts made from the same episode:
 
+| Post | What | When |
+| --- | --- | --- |
+| Reel | the video | scheduled for the same 7 PM slot as YouTube |
+| Photo | the punchline frame (POV text + reaction face), 4:5 | `FACEBOOK_PHOTO_DELAY_HOURS` after the Reel (default 3 h → 10 PM PKT) |
+| Story | the hook frame with a "NEW MEME · Tonight 7 PM on Reels" card | as soon as the run finishes (the API can't schedule Stories); live 24 h |
+
+Turn any of them off with the repository variables `FACEBOOK_REEL`, `FACEBOOK_PHOTO`,
+`FACEBOOK_STORY` (`false`), or all of Facebook with `FACEBOOK_ENABLED=false`. Reels can only go to
+a **Page**, not a personal profile.
+
+Setup (once):
 1. At developers.facebook.com, create an app (use case: *Manage everything on your Page*), or reuse
-   the Sunny app. Add a privacy policy URL and switch the app to **Live**; in Development mode Reels
+   the Sunny app. Add a privacy policy URL and switch the app to **Live**; in Development mode posts
    are visible only to people with a role on the app.
 2. Put `FACEBOOK_APP_ID` and `FACEBOOK_APP_SECRET` in `.env`.
 3. In Graph API Explorer, select the app, click *Get User Access Token*, tick `pages_show_list`,
    `pages_read_engagement` and `pages_manage_posts`, and approve for the **Sketch Man** Page.
-4. Run `npm run auth:facebook` on your computer and paste that token. It lists your Pages; pick
-   Sketch Man. It prints `FACEBOOK_PAGE_ID` and a Page token that never expires (unless you change
-   your Facebook password or remove the app).
+4. Run `npm run auth:facebook` on your computer and paste that token; pick Sketch Man. It prints
+   `FACEBOOK_PAGE_ID` and a Page token that never expires.
 5. Add repository secrets `FACEBOOK_PAGE_ID` and `FACEBOOK_PAGE_TOKEN`.
-6. Run the workflow in `facebook-test` mode: it saves the sample as a **draft** Reel
-   (Meta Business Suite → Content → Drafts) without posting anything.
+6. Run the workflow in `facebook-test` mode: the Reel is saved as a **draft** and the photo is
+   uploaded unpublished, so nothing appears on the Page. Stories have no draft, so the test skips it.
 
-`private-upload` and `upload-test` also keep Facebook as a draft. Reels are labelled AI-generated
-(`is_ai_generated`). Set the repository variable `FACEBOOK_ENABLED=false` to pause Facebook. If
-Facebook fails, the YouTube upload still counts and the run is marked failed so you get an email.
+`private-upload` and `upload-test` keep Facebook as drafts too. Reels are labelled AI-generated
+(`is_ai_generated`). If any Facebook part fails, YouTube and the other parts still go out and the
+run is marked failed so you get an email.
 
 ## Daily schedule
 

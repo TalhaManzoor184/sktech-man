@@ -113,3 +113,68 @@ export async function uploadFacebookReel(file: string, script: EpisodeScript, pu
   console.warn("  Facebook is still processing the Reel; it should appear shortly.");
   return { videoId, state: schedule ? `scheduled for ${publishAt}` : "processing" };
 }
+
+/* ---------- photo post and story ---------- */
+
+/** POST a multipart form (for image uploads). */
+async function graphForm<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`${GRAPH}/${config.facebookGraphVersion}/${path}`, { method: "POST", body: form });
+  const json = (await res.json()) as T & GraphError;
+  if (!res.ok || json.error) throw new Error(`Facebook ${path} failed: ${json.error?.code ?? res.status} ${json.error?.message ?? ""}`);
+  return json;
+}
+
+async function imageForm(file: string, fields: Record<string, string>): Promise<FormData> {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  form.append("source", new Blob([await fs.readFile(file)], { type: "image/jpeg" }), "image.jpg");
+  return form;
+}
+
+/** Caption for the photo post: the meme setup, pointing to the Reel for the full skit. */
+function photoCaption(script: EpisodeScript): string {
+  const tags = ["#sketchman", "#memes", "#relatable", "#funny", "#meme"];
+  return `${script.pov} 💀\n\nFull skit in our Reels 🎬\n\n${tags.join(" ")}`;
+}
+
+/**
+ * Post the meme picture on the Page. With `publishAt` more than 10 minutes ahead it is scheduled,
+ * otherwise published now. FACEBOOK_DRAFT=true uploads it unpublished (hidden) for tests.
+ */
+export async function postFacebookPhoto(file: string, script: EpisodeScript, publishAt?: string): Promise<{ id: string; state: string }> {
+  const pageId = req("FACEBOOK_PAGE_ID");
+  const token = req("FACEBOOK_PAGE_TOKEN");
+  const draft = process.env.FACEBOOK_DRAFT === "true";
+  const when = publishAt ? Math.floor(new Date(publishAt).getTime() / 1000) : 0;
+  const schedule = !draft && when > Date.now() / 1000 + 11 * 60;
+  const fields: Record<string, string> = { access_token: token, message: photoCaption(script) };
+  if (draft) fields.published = "false";
+  else if (schedule) {
+    fields.published = "false";
+    fields.scheduled_publish_time = String(when);
+  }
+  const res = await graphForm<{ id: string; post_id?: string }>(`${pageId}/photos`, await imageForm(file, fields));
+  return { id: res.post_id ?? res.id, state: draft ? "uploaded unpublished (test)" : schedule ? `scheduled for ${publishAt}` : "published" };
+}
+
+/**
+ * Post an image as a Page Story. Stories can't be scheduled through the API, so it goes live now
+ * and stays up for 24 hours. Skipped in draft/test mode because a Story has no draft state.
+ */
+export async function postFacebookStory(file: string): Promise<{ id: string; state: string }> {
+  if (process.env.FACEBOOK_DRAFT === "true") return { id: "", state: "skipped in test mode (Stories have no draft)" };
+  const pageId = req("FACEBOOK_PAGE_ID");
+  const token = req("FACEBOOK_PAGE_TOKEN");
+  // 1. Upload the image unpublished; 2. turn it into a Story.
+  const photo = await graphForm<{ id: string }>(`${pageId}/photos`, await imageForm(file, { access_token: token, published: "false" }));
+  const story = await graph<{ success?: boolean; post_id?: string }>("POST", `${pageId}/photo_stories`, { access_token: token, photo_id: photo.id });
+  if (story.success === false) throw new Error("Facebook photo_stories returned success=false");
+  return { id: story.post_id ?? photo.id, state: "published (live for 24 h)" };
+}
+
+/** Which Facebook formats are on. Each can be switched off with a repository variable. */
+export const facebookParts = {
+  reel: () => process.env.FACEBOOK_REEL !== "false",
+  photo: () => process.env.FACEBOOK_PHOTO !== "false",
+  story: () => process.env.FACEBOOK_STORY !== "false",
+};

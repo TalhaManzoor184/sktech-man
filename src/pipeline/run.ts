@@ -3,14 +3,14 @@ import path from "node:path";
 import { EpisodeScript, FPS, SILENT_BEAT_SECONDS, type EpisodeProps, type RenderedBeat, type Speaker } from "../shared/episode";
 import { computeTimeline } from "../shared/timeline";
 import { config } from "./config";
-import { appendHistory, loadHistory } from "./history";
+import { appendHistory, loadHistory, updateLastHistory, type HistoryEntry } from "./history";
 import { mouthCues } from "./lipsync";
-import { renderEpisode } from "./render";
+import { renderEpisode, renderMemePhoto, renderStoryImage } from "./render";
 import { writeScript } from "./script";
 import { makeSfx } from "./sfx";
 import { trendingNotes } from "./trends";
 import { voiceDialogue, voiceEpisode, type Voiced } from "./tts";
-import { facebookConfigured, uploadFacebookReel } from "./facebook";
+import { facebookConfigured, facebookParts, postFacebookPhoto, postFacebookStory, uploadFacebookReel } from "./facebook";
 import { publishAtIso, uploadShort } from "./upload";
 
 /**
@@ -159,36 +159,108 @@ async function main() {
   await renderEpisode(props, publicDir, mp4);
   console.log(`  saved ${path.relative(process.cwd(), mp4)}`);
 
+  // Facebook photo + story images, made from frames of the same episode.
+  const wantImages = facebookConfigured() || args.has("no-upload");
+  const photoJpg = path.join(runDir, "facebook-photo.jpg");
+  const storyJpg = path.join(runDir, "facebook-story.jpg");
+  let imagesOk = false;
+  if (wantImages) {
+    try {
+      const tl = computeTimeline(props);
+      const last = beats.length - 1;
+      const lastBeat = beats[last];
+      // Punchline: the reaction shot after the boom zoom, or late in the last line.
+      const punchT = lastBeat.audioFile ? tl.beatStarts[last] + lastBeat.duration * 0.7 : tl.beatStarts[last] + 0.5;
+      const hookT = tl.beatStarts[0] + Math.min(1.2, beats[0].duration * 0.6);
+      await renderMemePhoto(props, Math.round(punchT * FPS), publicDir, photoJpg);
+      await renderStoryImage(props, Math.round(hookT * FPS), "NEW MEME", storySubline(), publicDir, storyJpg);
+      imagesOk = true;
+      console.log("  Facebook images: photo (punchline, 4:5) + story (hook with \"new meme\" card)");
+    } catch (err) {
+      console.warn(`  Could not make the Facebook images: ${String((err as Error)?.message ?? err).slice(0, 300)}`);
+    }
+  }
+
   // 4. Upload
   if (args.has("no-upload")) {
     console.log("Upload: skipped (--no-upload)");
   } else if (args.has("facebook-only")) {
     if (!facebookConfigured()) throw new Error("Facebook test needs FACEBOOK_PAGE_ID and FACEBOOK_PAGE_TOKEN secrets.");
-    const fb = await uploadFacebookReel(mp4, script);
-    console.log(`Facebook: Reel ${fb.videoId} ${fb.state}`);
-    notice("Facebook test", `Reel ${fb.videoId} ${fb.state}`);
+    await postToFacebook({ date, title: script.title, theme: script.theme }, undefined, true);
   } else {
     const { videoId, publishAt } = await uploadShort(mp4, script, takenSlots);
     console.log(`Upload: https://youtube.com/shorts/${videoId}${publishAt ? ` (goes public ${publishAt})` : ""}`);
+    // Record the slot at once, so a crash or a failed later step can never cause a second upload.
+    const entry: HistoryEntry = { date, title: script.title, theme: script.theme, videoId, publishAt };
+    await appendHistory(entry);
 
-    // Facebook Page Reel, same video, same publish time. Optional: never blocks YouTube or history.
-    let facebookVideoId: string | undefined;
     if (args.has("no-facebook") || !facebookConfigured()) {
       console.log(`Facebook: skipped (${args.has("no-facebook") ? "--no-facebook" : "FACEBOOK_ENABLED is false or Facebook secrets are missing"})`);
     } else {
+      await postToFacebook(entry, publishAt, false);
+      await updateLastHistory(entry);
+    }
+  }
+
+  /** Reel + photo + story on the Page. Each part is optional and never blocks the others. */
+  async function postToFacebook(entry: HistoryEntry, publishAt: string | undefined, test: boolean) {
+    const fail = (what: string, err: unknown) => {
+      console.error(err);
+      const msg = String((err as Error)?.message ?? err).replace(/[\r\n%]/g, " ");
+      if (process.env.GITHUB_ACTIONS) console.log(`::error title=Facebook ${what} failed::${msg}`);
+      process.exitCode = 1; // YouTube still went out; fail the run so the problem gets noticed
+    };
+    const label = test ? "Facebook test" : "Facebook";
+    if (facebookParts.reel()) {
       try {
         const fb = await uploadFacebookReel(mp4, script, publishAt);
-        facebookVideoId = fb.videoId;
+        entry.facebookVideoId = fb.videoId;
         console.log(`Facebook: Reel ${fb.videoId} ${fb.state}`);
-        notice("Facebook", `Reel ${fb.videoId} ${fb.state}`);
+        notice(label, `Reel ${fb.videoId} ${fb.state}`);
       } catch (err) {
-        console.error(err);
-        const msg = String((err as Error)?.message ?? err).replace(/[\r\n%]/g, " ");
-        if (process.env.GITHUB_ACTIONS) console.log(`::error title=Facebook upload failed::${msg}`);
-        process.exitCode = 1; // YouTube still went out; fail the run so the Facebook problem gets noticed
+        fail("Reel", err);
       }
     }
-    await appendHistory({ date, title: script.title, theme: script.theme, videoId, publishAt, facebookVideoId });
+    if (!imagesOk) {
+      if (facebookParts.photo() || facebookParts.story()) fail("images", new Error("photo/story images were not rendered"));
+      return;
+    }
+    if (facebookParts.photo()) {
+      try {
+        const base = publishAt ? new Date(publishAt).getTime() : Date.now();
+        const at = config.facebookPhotoDelayHours > 0 ? new Date(base + config.facebookPhotoDelayHours * 3600_000).toISOString() : publishAt;
+        const ph = await postFacebookPhoto(photoJpg, script, at);
+        entry.facebookPhotoId = ph.id;
+        console.log(`Facebook: photo ${ph.id} ${ph.state}`);
+        notice(`${label} photo`, `${ph.id} ${ph.state}`);
+      } catch (err) {
+        fail("photo", err);
+      }
+    }
+    if (facebookParts.story()) {
+      try {
+        const st = await postFacebookStory(storyJpg);
+        if (st.id) entry.facebookStoryId = st.id;
+        console.log(`Facebook: story ${st.id} ${st.state}`);
+        notice(`${label} story`, `${st.id || "-"} ${st.state}`);
+      } catch (err) {
+        fail("story", err);
+      }
+    }
+  }
+
+  /** "Tonight 7 PM on Reels" / "Tomorrow 7 PM on Reels" / "Out now on Reels", in Page-local time. */
+  function storySubline(): string {
+    if (config.uploadMode !== "schedule" || args.has("facebook-only")) return "Out now on Reels";
+    const slot = new Date(publishAtIso(new Date(), takenSlots));
+    const off = config.publishUtcOffset * 3600_000;
+    const local = new Date(slot.getTime() + off);
+    const today = new Date(Date.now() + off);
+    const h = local.getUTCHours();
+    const m = local.getUTCMinutes();
+    const time = `${h % 12 || 12}${m ? `:${String(m).padStart(2, "0")}` : ""} ${h < 12 ? "AM" : "PM"}`;
+    const sameDay = local.toISOString().slice(0, 10) === today.toISOString().slice(0, 10);
+    return `${sameDay ? (h >= 17 ? "Tonight" : "Today") : "Tomorrow"} ${time} on Reels`;
   }
 
   console.log(`Done in ${((Date.now() - t0) / 1000).toFixed(0)}s`);

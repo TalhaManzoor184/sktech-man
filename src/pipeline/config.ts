@@ -82,6 +82,8 @@ export const config = {
   videoLanguage: opt("VIDEO_LANGUAGE", "en"),
   /** Meta Graph API version for Facebook Reels. */
   facebookGraphVersion: opt("FACEBOOK_GRAPH_VERSION", "v26.0"),
+  /** The Facebook photo post goes out this many hours after the Reel (0 = same time). */
+  facebookPhotoDelayHours: Number(opt("FACEBOOK_PHOTO_DELAY_HOURS", "3")),
 
   paths: {
     bible: path.join(ROOT, "character/bible.md"),

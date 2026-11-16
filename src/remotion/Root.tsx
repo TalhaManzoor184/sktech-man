@@ -4,6 +4,7 @@ import { Composition } from "remotion";
 import { FPS, HEIGHT, WIDTH, type EpisodeProps } from "../shared/episode";
 import { computeTimeline } from "../shared/timeline";
 import { Episode } from "./Episode";
+import { StoryTeaser, type TeaserProps } from "./StoryTeaser";
 
 const w = (line: string, duration: number) => {
   const tokens = line.split(" ");
@@ -27,17 +28,33 @@ const PREVIEW: EpisodeProps = {
 };
 
 export const Root: React.FC = () => (
-  <Composition
-    id="SketchEpisode"
-    component={Episode as unknown as React.FC<Record<string, unknown>>}
-    width={WIDTH}
-    height={HEIGHT}
-    fps={FPS}
-    durationInFrames={90}
-    defaultProps={PREVIEW as unknown as Record<string, unknown>}
-    calculateMetadata={({ props }) => {
-      const p = props as unknown as EpisodeProps;
-      return { durationInFrames: computeTimeline(p).totalFrames, fps: p.fps };
-    }}
-  />
+  <>
+    <Composition
+      id="SketchEpisode"
+      component={Episode as unknown as React.FC<Record<string, unknown>>}
+      width={WIDTH}
+      height={HEIGHT}
+      fps={FPS}
+      durationInFrames={90}
+      defaultProps={PREVIEW as unknown as Record<string, unknown>}
+      calculateMetadata={({ props }) => {
+        const p = props as unknown as EpisodeProps;
+        return { durationInFrames: computeTimeline(p).totalFrames, fps: p.fps };
+      }}
+    />
+    {/* Facebook Story image: one frozen frame of the episode with a "new meme" card. */}
+    <Composition
+      id="StoryTeaser"
+      component={StoryTeaser as unknown as React.FC<Record<string, unknown>>}
+      width={WIDTH}
+      height={HEIGHT}
+      fps={FPS}
+      durationInFrames={90}
+      defaultProps={{ ...PREVIEW, teaserFrame: 30, headline: "NEW MEME", sub: "Tonight 7 PM on Reels" } satisfies TeaserProps as unknown as Record<string, unknown>}
+      calculateMetadata={({ props }) => {
+        const p = props as unknown as EpisodeProps;
+        return { durationInFrames: computeTimeline(p).totalFrames, fps: p.fps };
+      }}
+    />
+  </>
 );
