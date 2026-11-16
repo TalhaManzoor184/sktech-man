@@ -1,0 +1,104 @@
+name: Weekly Sketch Man compilation
+
+on:
+  schedule:
+    # Every Sunday. GitHub starts cron jobs late or skips them, so try three times
+    # (3:23, 4:53 and 6:17 PM PKT); each run does nothing if this week's video is already up.
+    # The video is uploaded private and goes public at WEEKLY_PUBLISH_TIME (9 PM PKT).
+    - cron: "23 10 * * 0"
+    - cron: "53 11 * * 0"
+    - cron: "17 13 * * 0"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "full = build + upload, public at WEEKLY_PUBLISH_TIME · private-upload = upload PRIVATE only · no-upload = build only (video kept as an artifact for 2 days)"
+        type: choice
+        options: [full, private-upload, no-upload]
+        default: no-upload
+
+permissions:
+  contents: write # to commit data/weekly.json and read the episode archive
+
+concurrency:
+  group: weekly-compilation
+  cancel-in-progress: false
+
+env:
+  UPLOAD_MODE: ${{ vars.UPLOAD_MODE || 'schedule' }}
+  PUBLISH_UTC_OFFSET: ${{ vars.PUBLISH_UTC_OFFSET || '5' }}
+  WEEKLY_PUBLISH_TIME: ${{ vars.WEEKLY_PUBLISH_TIME || '21:00' }}
+  WEEKLY_DAYS: ${{ vars.WEEKLY_DAYS || '7' }}
+  TTS_PROVIDER: ${{ vars.TTS_PROVIDER || 'gemini' }}
+  SKETCH_VOICE: ${{ vars.SKETCH_VOICE || 'Puck' }}
+  TARGET_WPS: ${{ vars.TARGET_WPS || '2.5' }}
+  MADE_FOR_KIDS: ${{ vars.MADE_FOR_KIDS || 'false' }}
+  CONTENT_LANGUAGE: ${{ vars.CONTENT_LANGUAGE || 'English' }}
+  TTS_LANGUAGE: ${{ vars.TTS_LANGUAGE || 'en-US' }}
+  VIDEO_LANGUAGE: ${{ vars.VIDEO_LANGUAGE || 'en' }}
+  WATERMARK: ${{ vars.WATERMARK || '@sketchman' }}
+  GEMINI_TEXT_MODEL: ${{ vars.GEMINI_TEXT_MODEL }}
+
+jobs:
+  weekly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install system tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg espeak-ng \
+            libnss3 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 libgbm1 libasound2t64 \
+            libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 libpango-1.0-0 libcairo2 libcups2t64
+          curl -sSL -o /tmp/rhubarb.zip https://github.com/DanielSWolf/rhubarb-lip-sync/releases/download/v1.13.0/Rhubarb-Lip-Sync-1.13.0-Linux.zip
+          unzip -q /tmp/rhubarb.zip -d /opt
+          echo "RHUBARB_PATH=/opt/Rhubarb-Lip-Sync-1.13.0-Linux/rhubarb" >> "$GITHUB_ENV"
+
+      - run: npm ci
+
+      - name: Make the weekly video
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+          MODE: ${{ github.event_name == 'schedule' && 'scheduled' || inputs.mode }}
+        run: |
+          case "$MODE" in
+            no-upload)      npm run weekly -- --no-upload ;;
+            private-upload) UPLOAD_MODE=private npm run weekly ;;
+            full)           npm run weekly ;;
+            *)              npm run weekly -- --if-not-done ;;
+          esac
+
+      - name: Save weekly history
+        if: always()
+        run: |
+          git config user.name "sketchman-bot"
+          git config user.email "sketchman-bot@users.noreply.github.com"
+          git add data/weekly.json 2>/dev/null || exit 0
+          if ! git diff --cached --quiet; then
+            git commit -m "Weekly compilation $(date -u +%F)"
+            for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done
+          fi
+
+      - name: Keep the video for review (no-upload runs)
+        if: always() && inputs.mode == 'no-upload'
+        continue-on-error: true
+        uses: actions/upload-artifact@v5
+        with:
+          name: weekly-${{ github.run_number }}
+          path: |
+            out/weekly-*/weekly.mp4
+            out/weekly-*/thumbnail.jpg
+            out/weekly-*/description.txt
+          retention-days: 2
+          if-no-files-found: ignore

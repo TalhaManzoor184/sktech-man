@@ -115,6 +115,21 @@ jobs:
             for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done
           fi
 
+      # Keep this episode's MP4 in the "episodes" GitHub Release, for the weekly compilation.
+      # Release files don't use the Actions artifact storage.
+      - name: Archive the episode
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f out/archive.txt ] || { echo "No new episode to archive."; exit 0; }
+          src=$(sed -n 1p out/archive.txt); name=$(sed -n 2p out/archive.txt)
+          gh release view episodes >/dev/null 2>&1 || gh release create episodes --title "Episode archive" \
+            --notes "Every Sketch Man episode, kept for the weekly compilation. Added automatically." --latest=false
+          cp "$src" "/tmp/$name" && gh release upload episodes "/tmp/$name" --clobber
+          echo "Archived $name"
+
       # Optional copy of the video for review. Never fails the run: GitHub's artifact storage is
       # shared by all your repos and can fill up.
       - name: Keep the video for 3 days

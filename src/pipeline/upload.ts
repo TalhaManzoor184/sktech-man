@@ -61,3 +61,53 @@ export async function uploadShort(file: string, script: EpisodeScript, takenSlot
   if (!videoId) throw new Error("YouTube did not return a video id.");
   return { videoId, publishAt };
 }
+
+/** Next occurrence of HH:MM local time (PUBLISH_UTC_OFFSET), at least 15 minutes from now. */
+export function nextLocalTime(hhmm: string, now = new Date()): string {
+  const [hh, mm] = hhmm.split(":").map(Number);
+  const off = config.publishUtcOffset * 3600_000;
+  const local = new Date(now.getTime() + off);
+  let t = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), hh, mm) - off;
+  while (t < now.getTime() + 15 * 60_000) t += 24 * 3600_000;
+  return new Date(t).toISOString();
+}
+
+/** Upload a regular (long-form) video. Scheduled at `publishAt`, or public now / private by UPLOAD_MODE. */
+export async function uploadLongForm(
+  file: string,
+  meta: { title: string; description: string; tags: string[] },
+  publishAt?: string,
+): Promise<{ videoId: string; publishAt?: string }> {
+  const yt = youtubeClient();
+  const schedule = config.uploadMode === "schedule" && publishAt;
+  const res = await yt.videos.insert({
+    part: ["snippet", "status"],
+    notifySubscribers: true,
+    requestBody: {
+      snippet: {
+        title: meta.title.replace(/\s*#shorts\b/gi, "").slice(0, 100),
+        description: meta.description.slice(0, 4900),
+        tags: meta.tags,
+        categoryId: "23", // Comedy
+        defaultLanguage: config.videoLanguage,
+        defaultAudioLanguage: config.videoLanguage,
+      },
+      status: {
+        privacyStatus: config.uploadMode === "public" ? "public" : "private",
+        publishAt: schedule ? publishAt : undefined,
+        selfDeclaredMadeForKids: config.madeForKids,
+        embeddable: true,
+      },
+    },
+    media: { mimeType: "video/mp4", body: fs.createReadStream(file) },
+  });
+  const videoId = res.data.id;
+  if (!videoId) throw new Error("YouTube did not return a video id.");
+  return { videoId, publishAt: schedule ? publishAt : undefined };
+}
+
+/** Custom thumbnail. Needs a phone-verified channel; failures are reported, not fatal. */
+export async function setThumbnail(videoId: string, jpg: string): Promise<void> {
+  const yt = youtubeClient();
+  await yt.thumbnails.set({ videoId, media: { mimeType: "image/jpeg", body: fs.createReadStream(jpg) } });
+}

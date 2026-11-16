@@ -5,6 +5,8 @@ export type HistoryEntry = {
   date: string;
   title: string;
   theme: string;
+  /** The on-screen POV setup (used by the weekly compilation). */
+  pov?: string;
   videoId?: string;
   publishAt?: string;
   facebookVideoId?: string;

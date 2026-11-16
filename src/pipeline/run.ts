@@ -11,6 +11,7 @@ import { makeSfx } from "./sfx";
 import { trendingNotes } from "./trends";
 import { voiceDialogue, voiceEpisode, type Voiced } from "./tts";
 import { facebookConfigured, facebookParts, postFacebookPhoto, postFacebookStory, uploadFacebookReel } from "./facebook";
+import { archiveName } from "./episodeSource";
 import { publishAtIso, uploadShort } from "./upload";
 
 /**
@@ -191,8 +192,10 @@ async function main() {
     const { videoId, publishAt } = await uploadShort(mp4, script, takenSlots);
     console.log(`Upload: https://youtube.com/shorts/${videoId}${publishAt ? ` (goes public ${publishAt})` : ""}`);
     // Record the slot at once, so a crash or a failed later step can never cause a second upload.
-    const entry: HistoryEntry = { date, title: script.title, theme: script.theme, videoId, publishAt };
+    const entry: HistoryEntry = { date, title: script.title, theme: script.theme, pov: script.pov, videoId, publishAt };
     await appendHistory(entry);
+    // Tell the workflow to keep this MP4 in the episode archive (for the weekly compilation).
+    await fs.writeFile(path.join(config.paths.out, "archive.txt"), `${mp4}\n${archiveName(entry)}\n`);
 
     if (args.has("no-facebook") || !facebookConfigured()) {
       console.log(`Facebook: skipped (${args.has("no-facebook") ? "--no-facebook" : "FACEBOOK_ENABLED is false or Facebook secrets are missing"})`);

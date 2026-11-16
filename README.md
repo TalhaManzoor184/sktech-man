@@ -26,6 +26,7 @@ so there is nothing to license.
 | `src/pipeline/tts.ts` | Voices: the whole skit as one two-voice Gemini conversation with an emotion per line, cut at the pauses and paced to `TARGET_WPS`. Falls back to one take per character. |
 | `src/pipeline/sfx.ts` | Synthesised meme sound effects. |
 | `src/pipeline/facebook.ts` | Facebook Page: Reel (same time as YouTube), meme photo, and a teaser Story. |
+| `src/pipeline/weekly.ts` | Sunday long-form compilation hosted by Sketch Man (see below). |
 | `src/remotion/StoryTeaser.tsx` | The Story image: the hook frame with a "new meme" card. |
 | `data/history.json` | Past episodes so themes don't repeat. Committed back by the workflow. |
 | `data/sample-episode.json` | A hand-written episode for testing without keys. |
@@ -90,6 +91,27 @@ Setup (once):
 `private-upload` and `upload-test` keep Facebook as drafts too. Reels are labelled AI-generated
 (`is_ai_generated`). If any Facebook part fails, YouTube and the other parts still go out and the
 run is marked failed so you get an email.
+
+## Weekly long-form compilation
+
+Every Sunday, `weekly-compilation.yml` turns the week's Shorts into one 16:9 YouTube video, which
+counts toward the 4,000 watch-hours path (Shorts watch time does not):
+
+- Sketch Man hosts it: an intro, one line before each meme (Gemini writes them, voiced and
+  lip-synced like the Shorts), and an outro with 8 s left for YouTube end-screen elements.
+- Each Short plays in the middle of a hand-drawn 16:9 frame with the day, date and POV text.
+- Chapters (one per day) go in the description, and a thumbnail is rendered and set (custom
+  thumbnails need a phone-verified channel; if that fails the run only warns).
+- Uploaded private, public at `WEEKLY_PUBLISH_TIME` (default 21:00 PKT, two hours after the daily Short).
+- Three tries on Sunday afternoon; `data/weekly.json` makes sure only one video goes out per week.
+
+Episodes come from the `episodes` GitHub Release: the daily workflow adds each new MP4 there
+(`ep-YYYY-MM-DD.mp4`). For older episodes it falls back to downloading the Reel from the Facebook
+Page. Variables: `WEEKLY_PUBLISH_TIME`, `WEEKLY_DAYS` (default 7), `WEEKLY_MIN_EPISODES` (default 3).
+Run it by hand with mode `no-upload` to review the video first (artifact kept 2 days).
+
+After the first weekly video is up, link it from your Shorts in YouTube Studio ("Related video"),
+so Shorts viewers can jump to the long video. The API can't set that.
 
 ## Daily schedule
 

@@ -75,3 +75,28 @@ export async function renderStoryImage(
   await ffmpeg(["-i", png, "-q:v", "2", outJpg]);
   return outJpg;
 }
+
+/* ---------- weekly compilation ---------- */
+
+/** One Sketch Man host segment of the weekly video (1920×1080 MP4). */
+export async function renderHostSegment(props: import("../shared/weekly").HostProps, publicDir: string, outFile: string): Promise<void> {
+  const serveUrl = await serveUrlFor(publicDir);
+  const inputProps = props as unknown as Record<string, unknown>;
+  const composition = await selectComposition({ serveUrl, id: "WeeklyHost", inputProps, browserExecutable: config.chromePath });
+  await renderMedia({
+    serveUrl,
+    composition,
+    inputProps,
+    codec: "h264",
+    crf: 20,
+    pixelFormat: "yuv420p",
+    audioBitrate: "192k",
+    outputLocation: outFile,
+    browserExecutable: config.chromePath,
+  });
+}
+
+/** Still PNG of a landscape composition (clip frame or thumbnail). */
+export async function renderWideStill(id: "ClipFrame" | "WeeklyThumb", props: object, publicDir: string, png: string): Promise<void> {
+  await still(publicDir, id, props as Record<string, unknown>, 0, png);
+}
