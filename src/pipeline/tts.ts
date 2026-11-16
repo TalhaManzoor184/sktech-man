@@ -296,6 +296,10 @@ const EMOTION: Record<Expression, string> = {
 
 const NAME: Record<Speaker, string> = { sketch: "Sketch", bro: "Bro" };
 
+const DIRECTION =
+  "Funny cartoon skit between two friends. Sound like a real person in a casual conversation: natural rhythm, " +
+  "natural breaths, real emotion; not an announcer, not reading a script. Relaxed pace, short pause between turns.";
+
 export type DialogueLine = { speaker: Speaker; line: string; expression: Expression };
 
 /**
@@ -319,15 +323,12 @@ export async function voiceDialogue(items: DialogueLine[], outWavs: string[], vo
     annotations.push({
       type: "speech_metadata",
       ...(multi ? { speaker: NAME[it.speaker] } : {}),
-      style: `${voices[it.speaker].style}. This line: ${EMOTION[it.expression]}.`,
+      style: `${DIRECTION} ${voices[it.speaker].style}. This line: ${EMOTION[it.expression]}.`,
       start_index: start,
       end_index: end,
     });
     if (k < items.length - 1) text += "\n";
   }
-  const direction =
-    "Two friends talking in a funny cartoon skit. Sound like real people in a casual conversation: natural rhythm, " +
-    "natural breaths, small reactions, real emotion. Not an announcer, not reading a script. Relaxed pace with a short pause between turns.";
 
   const dir = path.dirname(outWavs[0]);
   const raw = path.join(dir, "dialogue.raw.wav");
@@ -340,7 +341,8 @@ export async function voiceDialogue(items: DialogueLine[], outWavs: string[], vo
         input: [
           {
             type: "user_input",
-            content: [{ type: "text", text, annotations: [{ type: "speech_metadata", style: direction }, ...annotations] as never }],
+            // Multi-speaker needs a speaker on every annotation, so the overall direction is part of each line's style.
+            content: [{ type: "text", text, annotations: annotations as never }],
           },
         ],
         response_format: { type: "audio", mime_type: "audio/wav" },

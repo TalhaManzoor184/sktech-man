@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample saved as a Facebook DRAFT only"
+        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample: Reel saved as DRAFT, photo uploaded unpublished, no Story"
         type: choice
         options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test]
         default: test
@@ -38,6 +38,11 @@ env:
   MADE_FOR_KIDS: ${{ vars.MADE_FOR_KIDS || 'false' }}
   # Facebook Reels run whenever FACEBOOK_PAGE_ID and FACEBOOK_PAGE_TOKEN secrets exist. Set FACEBOOK_ENABLED=false to pause.
   FACEBOOK_ENABLED: ${{ vars.FACEBOOK_ENABLED || 'true' }}
+  # Each day on the Page: 1 Reel (7 PM), 1 photo (3 h later), 1 Story (when the run finishes). Set any to false to drop it.
+  FACEBOOK_REEL: ${{ vars.FACEBOOK_REEL || 'true' }}
+  FACEBOOK_PHOTO: ${{ vars.FACEBOOK_PHOTO || 'true' }}
+  FACEBOOK_STORY: ${{ vars.FACEBOOK_STORY || 'true' }}
+  FACEBOOK_PHOTO_DELAY_HOURS: ${{ vars.FACEBOOK_PHOTO_DELAY_HOURS || '3' }}
   SCRIPT_PROVIDER: ${{ vars.SCRIPT_PROVIDER || 'gemini' }}
   TRENDS: ${{ vars.TRENDS || 'on' }}
   CONTENT_LANGUAGE: ${{ vars.CONTENT_LANGUAGE || 'English' }}
@@ -97,23 +102,30 @@ jobs:
             *)           npm run episode -- --if-slot-free ;;
           esac
 
-      - name: Keep the video for 14 days
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: episode-${{ github.run_number }}
-          path: |
-            out/*/episode.mp4
-            out/*/script.json
-          retention-days: 14
-          if-no-files-found: ignore
-
+      # Save history FIRST and always: if this is skipped after an upload, the next daily try thinks
+      # the slot is still free and uploads the episode again.
       - name: Save episode history
+        if: always()
         run: |
           git config user.name "sketchman-bot"
           git config user.email "sketchman-bot@users.noreply.github.com"
           git add data/history.json
           if ! git diff --cached --quiet; then
             git commit -m "Episode $(date -u +%F)"
-            git push
+            for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done
           fi
+
+      # Optional copy of the video for review. Never fails the run: GitHub's artifact storage is
+      # shared by all your repos and can fill up.
+      - name: Keep the video for 3 days
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v5
+        with:
+          name: episode-${{ github.run_number }}
+          path: |
+            out/*/episode.mp4
+            out/*/script.json
+            out/*/facebook-*.jpg
+          retention-days: 3
+          if-no-files-found: ignore
