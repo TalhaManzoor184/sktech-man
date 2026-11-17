@@ -12,6 +12,7 @@ import { trendingNotes } from "./trends";
 import { voiceDialogue, voiceEpisode, type Voiced } from "./tts";
 import { facebookConfigured, facebookParts, postFacebookPhoto, postFacebookStory, uploadFacebookReel } from "./facebook";
 import { archiveName } from "./episodeSource";
+import { instagramConfigured, instagramParts, postInstagramPhoto, postInstagramReel, postInstagramStory } from "./instagram";
 import { publishAtIso, uploadShort } from "./upload";
 
 /**
@@ -187,7 +188,9 @@ async function main() {
     console.log("Upload: skipped (--no-upload)");
   } else if (args.has("facebook-only")) {
     if (!facebookConfigured()) throw new Error("Facebook test needs FACEBOOK_PAGE_ID and FACEBOOK_PAGE_TOKEN secrets.");
-    await postToFacebook({ date, title: script.title, theme: script.theme }, undefined, true);
+    const e: HistoryEntry = { date, title: script.title, theme: script.theme };
+    await postToFacebook(e, undefined, true);
+    await postToInstagram(e);
   } else {
     const { videoId, publishAt } = await uploadShort(mp4, script, takenSlots);
     console.log(`Upload: https://youtube.com/shorts/${videoId}${publishAt ? ` (goes public ${publishAt})` : ""}`);
@@ -201,6 +204,8 @@ async function main() {
       console.log(`Facebook: skipped (${args.has("no-facebook") ? "--no-facebook" : "FACEBOOK_ENABLED is false or Facebook secrets are missing"})`);
     } else {
       await postToFacebook(entry, publishAt, false);
+      await updateLastHistory(entry);
+      await postToInstagram(entry);
       await updateLastHistory(entry);
     }
   }
@@ -248,6 +253,45 @@ async function main() {
         notice(`${label} story`, `${st.id || "-"} ${st.state}`);
       } catch (err) {
         fail("story", err);
+      }
+    }
+  }
+
+  /** Reel + photo + story on Instagram. Published right away (the API can't schedule). */
+  async function postToInstagram(entry: HistoryEntry) {
+    if (!instagramConfigured()) {
+      console.log("Instagram: skipped (no INSTAGRAM_ACCOUNT_ID secret, or INSTAGRAM_ENABLED is false)");
+      return;
+    }
+    if (process.env.FACEBOOK_DRAFT === "true") {
+      console.log("Instagram: skipped in test mode (Instagram has no drafts)");
+      notice("Instagram test", "skipped: Instagram has no drafts");
+      return;
+    }
+    const fail = (what: string, err: unknown) => {
+      console.error(err);
+      const msg = String((err as Error)?.message ?? err).replace(/[\r\n%]/g, " ");
+      if (process.env.GITHUB_ACTIONS) console.log(`::error title=Instagram ${what} failed::${msg}`);
+      process.exitCode = 1;
+    };
+    const parts: [string, () => boolean, () => Promise<string>, (id: string) => void][] = [
+      ["Reel", instagramParts.reel, () => postInstagramReel(mp4, script), (id) => (entry.instagramReelId = id)],
+      ["photo", instagramParts.photo, () => postInstagramPhoto(photoJpg, script), (id) => (entry.instagramPhotoId = id)],
+      ["story", instagramParts.story, () => postInstagramStory(storyJpg), (id) => (entry.instagramStoryId = id)],
+    ];
+    for (const [name, on, post, save] of parts) {
+      if (!on()) continue;
+      if (name !== "Reel" && !imagesOk) {
+        fail(name, new Error("image was not rendered"));
+        continue;
+      }
+      try {
+        const id = await post();
+        save(id);
+        console.log(`Instagram: ${name} ${id} published`);
+        notice(`Instagram ${name}`, `${id} published`);
+      } catch (err) {
+        fail(name, err);
       }
     }
   }

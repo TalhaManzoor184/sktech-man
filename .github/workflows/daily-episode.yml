@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample: Reel saved as DRAFT, photo uploaded unpublished, no Story · facebook-now = new episode posted PUBLIC on Facebook right now (Reel + photo + Story), no YouTube"
+        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample: Reel saved as DRAFT, photo uploaded unpublished, no Story · facebook-now = new episode posted PUBLIC on Facebook right now (Reel + photo + Story) and on Instagram, no YouTube · instagram-now = new episode on Instagram only, right now"
         type: choice
-        options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test, facebook-now]
+        options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test, facebook-now, instagram-now]
         default: test
 
 permissions:
@@ -43,6 +43,11 @@ env:
   FACEBOOK_PHOTO: ${{ vars.FACEBOOK_PHOTO || 'true' }}
   FACEBOOK_STORY: ${{ vars.FACEBOOK_STORY || 'true' }}
   FACEBOOK_PHOTO_DELAY_HOURS: ${{ vars.FACEBOOK_PHOTO_DELAY_HOURS || '3' }}
+  # Instagram (needs the INSTAGRAM_ACCOUNT_ID secret): Reel + photo + Story, published when the run finishes.
+  INSTAGRAM_ENABLED: ${{ vars.INSTAGRAM_ENABLED || 'true' }}
+  INSTAGRAM_REEL: ${{ vars.INSTAGRAM_REEL || 'true' }}
+  INSTAGRAM_PHOTO: ${{ vars.INSTAGRAM_PHOTO || 'true' }}
+  INSTAGRAM_STORY: ${{ vars.INSTAGRAM_STORY || 'true' }}
   SCRIPT_PROVIDER: ${{ vars.SCRIPT_PROVIDER || 'gemini' }}
   TRENDS: ${{ vars.TRENDS || 'on' }}
   CONTENT_LANGUAGE: ${{ vars.CONTENT_LANGUAGE || 'English' }}
@@ -89,6 +94,7 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
           FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+          INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
           MODE: ${{ github.event_name == 'schedule' && 'scheduled' || inputs.mode }}
         run: |
           case "$MODE" in
@@ -99,6 +105,7 @@ jobs:
             upload-test) UPLOAD_MODE=private FACEBOOK_DRAFT=true npm run episode -- --sample --tts=espeak ;;
             facebook-test) FACEBOOK_DRAFT=true npm run episode -- --sample --tts=espeak --facebook-only ;;
             facebook-now) FACEBOOK_PHOTO_DELAY_HOURS=0 npm run episode -- --facebook-only ;;
+            instagram-now) FACEBOOK_REEL=false FACEBOOK_PHOTO=false FACEBOOK_STORY=false npm run episode -- --facebook-only ;;
             full)        npm run episode ;;
             *)           npm run episode -- --if-slot-free ;;
           esac

@@ -12,6 +12,9 @@ export type HistoryEntry = {
   facebookVideoId?: string;
   facebookPhotoId?: string;
   facebookStoryId?: string;
+  instagramReelId?: string;
+  instagramPhotoId?: string;
+  instagramStoryId?: string;
 };
 
 export async function loadHistory(): Promise<HistoryEntry[]> {

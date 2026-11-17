@@ -18,7 +18,7 @@ export function facebookConfigured(): boolean {
 
 type GraphError = { error?: { message: string; type?: string; code?: number; error_subcode?: number; fbtrace_id?: string } };
 
-async function graph<T>(method: "GET" | "POST", path: string, params: Record<string, string>): Promise<T> {
+export async function graph<T>(method: "GET" | "POST", path: string, params: Record<string, string>): Promise<T> {
   const v = config.facebookGraphVersion;
   const qs = new URLSearchParams(params).toString();
   const res = await fetch(`${GRAPH}/${v}/${path}?${qs}`, { method });
@@ -117,14 +117,14 @@ export async function uploadFacebookReel(file: string, script: EpisodeScript, pu
 /* ---------- photo post and story ---------- */
 
 /** POST a multipart form (for image uploads). */
-async function graphForm<T>(path: string, form: FormData): Promise<T> {
+export async function graphForm<T>(path: string, form: FormData): Promise<T> {
   const res = await fetch(`${GRAPH}/${config.facebookGraphVersion}/${path}`, { method: "POST", body: form });
   const json = (await res.json()) as T & GraphError;
   if (!res.ok || json.error) throw new Error(`Facebook ${path} failed: ${json.error?.code ?? res.status} ${json.error?.message ?? ""}`);
   return json;
 }
 
-async function imageForm(file: string, fields: Record<string, string>): Promise<FormData> {
+export async function imageForm(file: string, fields: Record<string, string>): Promise<FormData> {
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.append(k, v);
   form.append("source", new Blob([await fs.readFile(file)], { type: "image/jpeg" }), "image.jpg");

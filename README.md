@@ -26,6 +26,7 @@ so there is nothing to license.
 | `src/pipeline/tts.ts` | Voices: the whole skit as one two-voice Gemini conversation with an emotion per line, cut at the pauses and paced to `TARGET_WPS`. Falls back to one take per character. |
 | `src/pipeline/sfx.ts` | Synthesised meme sound effects. |
 | `src/pipeline/facebook.ts` | Facebook Page: Reel (same time as YouTube), meme photo, and a teaser Story. |
+| `src/pipeline/instagram.ts` | Instagram Reel, photo and Story through the linked Page. |
 | `src/pipeline/weekly.ts` | Sunday long-form compilation hosted by Sketch Man (see below). |
 | `src/remotion/StoryTeaser.tsx` | The Story image: the hook frame with a "new meme" card. |
 | `data/history.json` | Past episodes so themes don't repeat. Committed back by the workflow. |
@@ -91,6 +92,28 @@ Setup (once):
 `private-upload` and `upload-test` keep Facebook as drafts too. Reels are labelled AI-generated
 (`is_ai_generated`). If any Facebook part fails, YouTube and the other parts still go out and the
 run is marked failed so you get an email.
+
+## Instagram: Reel + photo + Story
+
+The same three posts go to the Instagram account linked to the Facebook Page, through the
+Instagram Content Publishing API (Meta's automatic Facebook-to-Instagram sharing does not pick up
+posts made through the API). Instagram can't schedule through the API, so they are published as
+soon as the run finishes.
+
+Setup (once):
+1. Make the Instagram account a **Business** account (Instagram → Settings → Account type). Stories
+   can't be published through the API from Creator accounts.
+2. In Graph API Explorer, get a new user token with the Page permissions **plus**
+   `instagram_basic` and `instagram_content_publish`, approving the Sketch Man Page and its
+   Instagram account.
+3. Run `npm run auth:facebook` and paste it. It prints `FACEBOOK_PAGE_ID`, a new
+   `FACEBOOK_PAGE_TOKEN` and `INSTAGRAM_ACCOUNT_ID`.
+4. Update the `FACEBOOK_PAGE_TOKEN` secret and add `INSTAGRAM_ACCOUNT_ID`.
+5. Run the workflow in `instagram-now` mode to post one episode to Instagram only.
+
+Turn parts off with the variables `INSTAGRAM_REEL`, `INSTAGRAM_PHOTO`, `INSTAGRAM_STORY`, or all of
+Instagram with `INSTAGRAM_ENABLED=false`. Images reach Instagram through a hidden photo on the Page
+(Instagram only accepts image URLs). Test modes skip Instagram, which has no drafts.
 
 ## Weekly long-form compilation
 

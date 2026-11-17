@@ -60,9 +60,25 @@ const dbg = await get<{ data: { expires_at?: number; scopes?: string[] } }>("deb
   access_token: `${appId}|${appSecret}`,
 });
 const missing = ["pages_manage_posts", "pages_read_engagement", "pages_show_list"].filter((s) => !dbg.data.scopes?.includes(s));
+const igMissing = ["instagram_basic", "instagram_content_publish"].filter((s) => !dbg.data.scopes?.includes(s));
 if (missing.length) console.warn(`Warning: token is missing ${missing.join(", ")}.`);
 console.log(`\nPage: ${page.name}`);
 console.log(`Expires: ${dbg.data.expires_at ? new Date(dbg.data.expires_at * 1000).toISOString() : "never"}`);
 console.log(`\nFACEBOOK_PAGE_ID=${page.id}`);
 console.log(`FACEBOOK_PAGE_TOKEN=${page.access_token}\n`);
-console.log("Add both as GitHub repository secrets. Keep the token private.");
+// Instagram: the professional account linked to this Page.
+try {
+  const ig = await get<{ instagram_business_account?: { id: string; username?: string } }>(page.id, {
+    fields: "instagram_business_account{id,username}",
+    access_token: page.access_token,
+  });
+  if (ig.instagram_business_account) {
+    console.log(`INSTAGRAM_ACCOUNT_ID=${ig.instagram_business_account.id}   (@${ig.instagram_business_account.username ?? "?"})`);
+    if (igMissing.length) console.warn(`Warning: for Instagram the token is missing ${igMissing.join(", ")}. Tick them in Graph API Explorer and run this again.`);
+  } else {
+    console.log("No Instagram account is linked to this Page (or the token lacks instagram_basic). Instagram posting stays off.");
+  }
+} catch (err) {
+  console.log(`Could not look up the linked Instagram account: ${(err as Error).message}`);
+}
+console.log("\nAdd these as GitHub repository secrets. Keep the token private.");
