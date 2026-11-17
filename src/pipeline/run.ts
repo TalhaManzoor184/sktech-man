@@ -213,7 +213,7 @@ async function main() {
       if (process.env.GITHUB_ACTIONS) console.log(`::error title=Facebook ${what} failed::${msg}`);
       process.exitCode = 1; // YouTube still went out; fail the run so the problem gets noticed
     };
-    const label = test ? "Facebook test" : "Facebook";
+    const label = test ? (process.env.FACEBOOK_DRAFT === "true" ? "Facebook test" : "Facebook now") : "Facebook";
     if (facebookParts.reel()) {
       try {
         const fb = await uploadFacebookReel(mp4, script, publishAt);

@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample: Reel saved as DRAFT, photo uploaded unpublished, no Story"
+        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample: Reel saved as DRAFT, photo uploaded unpublished, no Story · facebook-now = new episode posted PUBLIC on Facebook right now (Reel + photo + Story), no YouTube"
         type: choice
-        options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test]
+        options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test, facebook-now]
         default: test
 
 permissions:
@@ -98,6 +98,7 @@ jobs:
             private-upload) UPLOAD_MODE=private FACEBOOK_DRAFT=true npm run episode ;;
             upload-test) UPLOAD_MODE=private FACEBOOK_DRAFT=true npm run episode -- --sample --tts=espeak ;;
             facebook-test) FACEBOOK_DRAFT=true npm run episode -- --sample --tts=espeak --facebook-only ;;
+            facebook-now) FACEBOOK_PHOTO_DELAY_HOURS=0 npm run episode -- --facebook-only ;;
             full)        npm run episode ;;
             *)           npm run episode -- --if-slot-free ;;
           esac
