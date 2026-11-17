@@ -12,7 +12,31 @@ import { graph, graphForm, imageForm } from "./facebook";
 
 export function instagramConfigured(): boolean {
   if (process.env.INSTAGRAM_ENABLED === "false") return false;
-  return Boolean(process.env.INSTAGRAM_ACCOUNT_ID && process.env.FACEBOOK_PAGE_TOKEN && process.env.FACEBOOK_PAGE_ID);
+  return Boolean(process.env.FACEBOOK_PAGE_TOKEN && process.env.FACEBOOK_PAGE_ID);
+}
+
+let igId: string | null | undefined;
+
+/**
+ * The Instagram account id: INSTAGRAM_ACCOUNT_ID if set, otherwise the Business account linked to
+ * the Facebook Page (needs instagram_basic on the token). null when there is none.
+ */
+export async function instagramAccountId(): Promise<string | null> {
+  if (igId !== undefined) return igId;
+  const fromEnv = process.env.INSTAGRAM_ACCOUNT_ID?.trim();
+  if (fromEnv) return (igId = fromEnv);
+  try {
+    const r = await graph<{ instagram_business_account?: { id: string; username?: string } }>("GET", req("FACEBOOK_PAGE_ID"), {
+      fields: "instagram_business_account{id,username}",
+      access_token: req("FACEBOOK_PAGE_TOKEN"),
+    });
+    igId = r.instagram_business_account?.id ?? null;
+    if (igId) console.log(`  Instagram account: @${r.instagram_business_account?.username ?? "?"} (${igId})`);
+  } catch (err) {
+    console.warn(`  Instagram account lookup failed: ${String((err as Error)?.message ?? err).slice(0, 200)}`);
+    igId = null;
+  }
+  return igId;
 }
 
 export const instagramParts = {
@@ -22,7 +46,10 @@ export const instagramParts = {
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const ig = () => req("INSTAGRAM_ACCOUNT_ID");
+const ig = () => {
+  if (!igId) throw new Error("No Instagram account id");
+  return igId;
+};
 const token = () => req("FACEBOOK_PAGE_TOKEN");
 
 function reelCaption(script: EpisodeScript): string {

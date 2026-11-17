@@ -12,7 +12,7 @@ import { trendingNotes } from "./trends";
 import { voiceDialogue, voiceEpisode, type Voiced } from "./tts";
 import { facebookConfigured, facebookParts, postFacebookPhoto, postFacebookStory, uploadFacebookReel } from "./facebook";
 import { archiveName } from "./episodeSource";
-import { instagramConfigured, instagramParts, postInstagramPhoto, postInstagramReel, postInstagramStory } from "./instagram";
+import { instagramAccountId, instagramConfigured, instagramParts, postInstagramPhoto, postInstagramReel, postInstagramStory } from "./instagram";
 import { publishAtIso, uploadShort } from "./upload";
 
 /**
@@ -260,7 +260,13 @@ async function main() {
   /** Reel + photo + story on Instagram. Published right away (the API can't schedule). */
   async function postToInstagram(entry: HistoryEntry) {
     if (!instagramConfigured()) {
-      console.log("Instagram: skipped (no INSTAGRAM_ACCOUNT_ID secret, or INSTAGRAM_ENABLED is false)");
+      console.log("Instagram: skipped (Facebook secrets missing, or INSTAGRAM_ENABLED is false)");
+      return;
+    }
+    if (!(await instagramAccountId())) {
+      const msg = "No Instagram Business account found on the Page. Link one, and give the token instagram_basic + instagram_content_publish.";
+      console.log(`Instagram: skipped. ${msg}`);
+      if (process.env.GITHUB_ACTIONS) console.log(`::warning title=Instagram skipped::${msg}`);
       return;
     }
     if (process.env.FACEBOOK_DRAFT === "true") {

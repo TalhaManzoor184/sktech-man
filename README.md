@@ -106,9 +106,10 @@ Setup (once):
 2. In Graph API Explorer, get a new user token with the Page permissions **plus**
    `instagram_basic` and `instagram_content_publish`, approving the Sketch Man Page and its
    Instagram account.
-3. Run `npm run auth:facebook` and paste it. It prints `FACEBOOK_PAGE_ID`, a new
-   `FACEBOOK_PAGE_TOKEN` and `INSTAGRAM_ACCOUNT_ID`.
-4. Update the `FACEBOOK_PAGE_TOKEN` secret and add `INSTAGRAM_ACCOUNT_ID`.
+3. Run `npm run auth:facebook` and paste it. It prints `FACEBOOK_PAGE_ID` and a new
+   `FACEBOOK_PAGE_TOKEN` (and, for reference, the Instagram account id).
+4. Update the `FACEBOOK_PAGE_TOKEN` secret. The Instagram account is found from the Page
+   automatically; set `INSTAGRAM_ACCOUNT_ID` only to override it.
 5. Run the workflow in `instagram-now` mode to post one episode to Instagram only.
 
 Turn parts off with the variables `INSTAGRAM_REEL`, `INSTAGRAM_PHOTO`, `INSTAGRAM_STORY`, or all of
