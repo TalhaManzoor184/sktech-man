@@ -317,8 +317,10 @@ export async function voiceDialogue(items: DialogueLine[], outWavs: string[], vo
   const annotations: Record<string, unknown>[] = [];
   for (const [k, it] of items.entries()) {
     const prefix = multi ? `${NAME[it.speaker]}: ` : "";
-    const start = Buffer.byteLength(text + prefix);
+    // Ranges must cover the whole text, so each one includes its "Name: " prefix and the newline after it.
+    const start = Buffer.byteLength(text);
     text += prefix + it.line;
+    if (k < items.length - 1) text += "\n";
     const end = Buffer.byteLength(text);
     annotations.push({
       type: "speech_metadata",
@@ -327,7 +329,6 @@ export async function voiceDialogue(items: DialogueLine[], outWavs: string[], vo
       start_index: start,
       end_index: end,
     });
-    if (k < items.length - 1) text += "\n";
   }
 
   const dir = path.dirname(outWavs[0]);
