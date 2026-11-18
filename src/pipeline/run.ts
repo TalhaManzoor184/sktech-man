@@ -13,7 +13,7 @@ import { voiceDialogue, voiceEpisode, type Voiced } from "./tts";
 import { facebookConfigured, facebookParts, postFacebookPhoto, postFacebookStory, uploadFacebookReel } from "./facebook";
 import { archiveName } from "./episodeSource";
 import { instagramAccountId, instagramConfigured, instagramParts, postInstagramPhoto, postInstagramReel, postInstagramStory } from "./instagram";
-import { publishAtIso, uploadShort } from "./upload";
+import { isPrimarySlot, publishAtIso, uploadShort } from "./upload";
 
 /**
  * One full episode: trends → script → voices → lip sync → sound effects → render → upload.
@@ -69,16 +69,19 @@ async function main() {
 
   // Scheduled runs fire several times a day because GitHub often starts cron jobs late or not at all.
   // Only the first one that finds the next publish slot empty makes an episode.
+  // With several slots a day, each run fills the next free slot, keeping about a day queued ahead.
   if (args.has("if-slot-free")) {
-    const slot = publishAtIso();
-    const taken = history.find((h) => h.publishAt === slot);
-    if (taken) {
-      console.log(`Slot ${slot} already has "${taken.title}". Nothing to do.`);
-      notice("Already scheduled", `${slot} has ${taken.title}`);
+    const slot = publishAtIso(new Date(), takenSlots);
+    const hoursAhead = (new Date(slot).getTime() - Date.now()) / 3600_000;
+    if (hoursAhead > config.slotLookaheadHours) {
+      console.log(`Next free slot ${slot} is ${hoursAhead.toFixed(0)} h away; the queue is full. Nothing to do.`);
+      notice("Queue full", `next free slot ${slot}`);
       return;
     }
     console.log(`Slot ${slot} is free; making an episode for it.`);
   }
+  const plannedSlot = config.uploadMode === "schedule" ? publishAtIso(new Date(), takenSlots) : undefined;
+  const primary = args.has("facebook-only") || isPrimarySlot(plannedSlot);
 
   // 1. Script (with this week's trends)
   let script: EpisodeScript;
@@ -152,6 +155,7 @@ async function main() {
     gapSeconds: Number(process.env.BEAT_GAP?.trim() || "0.6"),
     outroSeconds: 0.9,
     watermark: config.watermark,
+    followText: process.env.FOLLOW_TEXT ?? "Follow for tomorrow's disaster",
   };
   await fs.writeFile(path.join(runDir, "props.json"), JSON.stringify(props, null, 2));
   const seconds = computeTimeline(props).totalSeconds;
@@ -230,10 +234,10 @@ async function main() {
       }
     }
     if (!imagesOk) {
-      if (facebookParts.photo() || facebookParts.story()) fail("images", new Error("photo/story images were not rendered"));
+      if (primary && (facebookParts.photo() || facebookParts.story())) fail("images", new Error("photo/story images were not rendered"));
       return;
     }
-    if (facebookParts.photo()) {
+    if (facebookParts.photo() && primary) {
       try {
         const base = publishAt ? new Date(publishAt).getTime() : Date.now();
         const at = config.facebookPhotoDelayHours > 0 ? new Date(base + config.facebookPhotoDelayHours * 3600_000).toISOString() : publishAt;
@@ -245,7 +249,7 @@ async function main() {
         fail("photo", err);
       }
     }
-    if (facebookParts.story()) {
+    if (facebookParts.story() && primary) {
       try {
         const st = await postFacebookStory(storyJpg);
         if (st.id) entry.facebookStoryId = st.id;
@@ -287,6 +291,7 @@ async function main() {
     ];
     for (const [name, on, post, save] of parts) {
       if (!on()) continue;
+      if (name !== "Reel" && !primary) continue; // photo + Story only for the day's main slot
       if (name !== "Reel" && !imagesOk) {
         fail(name, new Error("image was not rendered"));
         continue;

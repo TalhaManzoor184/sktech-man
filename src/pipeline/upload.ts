@@ -16,14 +16,30 @@ export function youtubeClient() {
  */
 export function publishAtIso(now = new Date(), taken: Iterable<string> = []): string {
   const used = new Set(taken);
-  const [hh, mm] = config.publishTime.split(":").map(Number);
+  const times = config.publishTimes.length ? config.publishTimes : [config.publishTime];
   const offsetMs = config.publishUtcOffset * 3600_000;
   const local = new Date(now.getTime() + offsetMs);
-  let target = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + config.publishDelayDays, hh, mm) - offsetMs;
-  // YouTube rejects times in the past. If today's slot is too close or gone, use the same time tomorrow.
-  while (target < now.getTime() + 15 * 60_000) target += 24 * 3600_000;
-  while (used.has(new Date(target).toISOString())) target += 24 * 3600_000;
-  return new Date(target).toISOString();
+  // Earliest slot (any of the daily times) at least 15 minutes ahead that no episode has yet.
+  for (let d = config.publishDelayDays; d < config.publishDelayDays + 400; d++) {
+    for (const t of times) {
+      const [hh, mm] = t.split(":").map(Number);
+      const target = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + d, hh, mm) - offsetMs;
+      if (target < now.getTime() + 15 * 60_000) continue;
+      const iso = new Date(target).toISOString();
+      if (!used.has(iso)) return iso;
+    }
+  }
+  throw new Error("No free publish slot found");
+}
+
+/** True when the slot is the day's main one (gets the photo + Story on Facebook/Instagram). */
+export function isPrimarySlot(iso?: string): boolean {
+  if (!iso) return true;
+  if (config.publishTimes.length <= 1) return true;
+  const local = new Date(new Date(iso).getTime() + config.publishUtcOffset * 3600_000);
+  const hhmm = `${String(local.getUTCHours()).padStart(2, "0")}:${String(local.getUTCMinutes()).padStart(2, "0")}`;
+  const [ph, pm] = config.primaryTime.split(":").map(Number);
+  return hhmm === `${String(ph).padStart(2, "0")}:${String(pm).padStart(2, "0")}`;
 }
 
 const FOOTER = `

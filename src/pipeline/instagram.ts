@@ -77,8 +77,16 @@ async function waitReady(containerId: string, minutes = 10): Promise<void> {
 
 async function publish(containerId: string): Promise<string> {
   await waitReady(containerId);
-  const res = await graph<{ id: string }>("POST", `${ig()}/media_publish`, { creation_id: containerId, access_token: token() });
-  return res.id;
+  // "9007 Media ID is not available" happens when publish comes a moment too early; wait and retry.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const res = await graph<{ id: string }>("POST", `${ig()}/media_publish`, { creation_id: containerId, access_token: token() });
+      return res.id;
+    } catch (err) {
+      if (attempt >= 6 || !/\b9007\b|not available|not ready/i.test(String(err))) throw err;
+      await sleep(10_000 * attempt);
+    }
+  }
 }
 
 /** Instagram needs a public image URL. Upload the image to the Page as a hidden photo and use its URL. */

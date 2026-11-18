@@ -93,6 +93,8 @@ export type EpisodeProps = {
   outroSeconds: number;
   /** Small handle in the corner, e.g. "@sketchman". Empty to hide. */
   watermark: string;
+  /** Small sticker on the last beat, e.g. "Follow for tomorrow's disaster". Empty to hide. */
+  followText?: string;
 };
 
 export const FPS = 30;

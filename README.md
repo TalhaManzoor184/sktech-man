@@ -139,12 +139,18 @@ so Shorts viewers can jump to the long video. The API can't set that.
 
 ## Daily schedule
 
-The workflow tries three times a day (3:13, 4:43 and 6:07 PM PKT) because GitHub often starts
-cron jobs late or skips them. The first run that finds the next 7:00 PM PKT slot empty makes the
-episode, uploads it private and schedules it for 7 PM on YouTube and Facebook; the other runs see
-the slot taken in `data/history.json` and do nothing. A manual `full` run never double-books: if
-today's slot is taken it schedules for the next free day. Watch it in YouTube Studio → Content →
-Scheduled before then; set `PUBLISH_DELAY_DAYS=1` for a full day to review.
+Three Shorts a day at `PUBLISH_TIMES` (default `15:00,19:00,23:00` PKT = 10 AM London,
+10 AM New York, 2 PM New York / 7 PM London). Every 3 hours a run first checks, in seconds and
+before installing anything (`scripts/slot-check.mjs`), whether the next free slot is within
+`SLOT_LOOKAHEAD_HOURS` (30); if so it makes one episode for that slot. About a day of episodes
+stays queued ahead, so late or skipped GitHub cron runs don't leave gaps, and a slot is never
+booked twice (`data/history.json`).
+
+Every Short goes to YouTube (scheduled), Facebook and Instagram as a Reel. The photo post and
+the Story only go out for the `PRIMARY_TIME` (19:00) episode, so the Page gets one of each a day.
+Each Short ends with a small "Follow for tomorrow's disaster" sticker on the punchline reaction
+(`FOLLOW_TEXT`, empty to hide). Watch them in YouTube Studio → Content → Scheduled; set
+`PUBLISH_DELAY_DAYS=1` for a full day to review. For one Short a day set `PUBLISH_TIMES=19:00`.
 
 ## Desi version
 

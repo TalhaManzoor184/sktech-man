@@ -110,6 +110,18 @@ export const Episode: React.FC<EpisodeProps> = (props) => {
         {!inOutro && beat.audioFile && local <= beat.duration + 0.25 && (
           <Captions words={beat.words} t={local} appear={interpolate(beatFrame, [0, 4], [0, 1], { extrapolateRight: "clamp" })} />
         )}
+        {/* Follow sticker on the punchline reaction: no extra seconds, so the loop stays tight. */}
+        {props.followText && idx === props.beats.length - 1 && local > 0.35 && (
+          <g
+            transform={`translate(270 ${(686).toFixed(0)}) rotate(-4) scale(${interpolate(local, [0.35, 0.5], [0.6, 1], { extrapolateRight: "clamp" }).toFixed(3)})`}
+          >
+            <rect x={-150} y={-30} width={300} height={54} rx={12} fill={INK} transform="translate(5 5)" />
+            <rect x={-150} y={-30} width={300} height={54} rx={12} fill={C.yellow} stroke={INK} strokeWidth={3.5} />
+            <text x={0} y={7} textAnchor="middle" fontFamily={HAND_FONT} fontSize={27} fill={INK}>
+              {props.followText}
+            </text>
+          </g>
+        )}
         {props.watermark && (
           <text x={516} y={40} textAnchor="end" fontFamily={HAND_FONT} fontSize={20} fill={INK} opacity={0.45}>
             {props.watermark}

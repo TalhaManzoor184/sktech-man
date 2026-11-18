@@ -12,7 +12,8 @@ export const ARCHIVE_TAG = "episodes";
 
 /** Asset name for an episode in the archive: one per publish slot. */
 export function archiveName(e: Pick<HistoryEntry, "publishAt" | "date">): string {
-  return `ep-${(e.publishAt ?? e.date).slice(0, 10)}.mp4`;
+  // ep-2026-11-18T1400.mp4 (several episodes a day). Archives made before Nov 18 are ep-YYYY-MM-DD.mp4.
+  return `ep-${(e.publishAt ?? e.date).slice(0, 16).replace(":", "")}.mp4`;
 }
 
 async function fromRelease(name: string, dir: string): Promise<string | null> {
@@ -48,9 +49,13 @@ async function fromFacebook(videoId: string, out: string): Promise<string | null
  * from the Nov 2026 bug included); the first one that can be found is used.
  */
 export async function fetchEpisode(candidates: HistoryEntry[], dir: string): Promise<{ file: string; entry: HistoryEntry; from: string } | null> {
-  const name = archiveName(candidates[0]);
-  const rel = await fromRelease(name, dir);
-  if (rel) return { file: rel, entry: candidates[0], from: "archive" };
+  const when = candidates[0].publishAt ?? candidates[0].date;
+  const names = [archiveName(candidates[0])];
+  if (when < "2026-11-19") names.push(`ep-${when.slice(0, 10)}.mp4`); // old one-a-day archive names
+  for (const name of names) {
+    const rel = await fromRelease(name, dir);
+    if (rel) return { file: rel, entry: candidates[0], from: "archive" };
+  }
   for (const e of candidates) {
     if (!e.facebookVideoId) continue;
     const f = await fromFacebook(e.facebookVideoId, path.join(dir, `fb-${e.facebookVideoId}.mp4`));

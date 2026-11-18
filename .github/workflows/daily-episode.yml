@@ -2,12 +2,11 @@ name: Daily Sketch Man meme
 
 on:
   schedule:
-    # GitHub starts cron jobs late (sometimes hours) or skips them, so try three times before the
-    # 7:00 PM PKT slot: 3:13 PM, 4:43 PM and 6:07 PM PKT. Each run checks data/history.json and
-    # does nothing if the next slot already has an episode, so only one video goes out per day.
-    - cron: "13 10 * * *"
-    - cron: "43 11 * * *"
-    - cron: "7 13 * * *"
+    # Three Shorts a day (PUBLISH_TIMES, default 15:00, 19:00 and 23:00 PKT). Every 3 hours a run
+    # checks (in seconds, before installing anything) whether the next free slot is within
+    # SLOT_LOOKAHEAD_HOURS; if so it makes one episode for it. This keeps about a day of episodes
+    # queued ahead, so late or skipped GitHub cron runs never leave a slot empty.
+    - cron: "13 */3 * * *"
   workflow_dispatch:
     inputs:
       mode:
@@ -27,6 +26,9 @@ env:
   # Change these in Settings → Secrets and variables → Actions → Variables.
   UPLOAD_MODE: ${{ vars.UPLOAD_MODE || 'schedule' }}
   PUBLISH_TIME: ${{ vars.PUBLISH_TIME || '19:00' }}
+  PUBLISH_TIMES: ${{ vars.PUBLISH_TIMES || '15:00,19:00,23:00' }}
+  PRIMARY_TIME: ${{ vars.PRIMARY_TIME || '19:00' }}
+  SLOT_LOOKAHEAD_HOURS: ${{ vars.SLOT_LOOKAHEAD_HOURS || '30' }}
   PUBLISH_UTC_OFFSET: ${{ vars.PUBLISH_UTC_OFFSET || '5' }}
   PUBLISH_DELAY_DAYS: ${{ vars.PUBLISH_DELAY_DAYS || '0' }}
   TTS_PROVIDER: ${{ vars.TTS_PROVIDER || 'gemini' }}
@@ -65,12 +67,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
+      - name: Is an episode needed?
+        id: slot
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then node scripts/slot-check.mjs; else echo "make=true" >> "$GITHUB_OUTPUT"; fi
+
+      - if: steps.slot.outputs.make == 'true'
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
       - name: Install system tools
+        if: steps.slot.outputs.make == 'true'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg espeak-ng \
@@ -80,9 +89,11 @@ jobs:
           unzip -q /tmp/rhubarb.zip -d /opt
           echo "RHUBARB_PATH=/opt/Rhubarb-Lip-Sync-1.13.0-Linux/rhubarb" >> "$GITHUB_ENV"
 
-      - run: npm ci
+      - if: steps.slot.outputs.make == 'true'
+        run: npm ci
 
       - name: Make episode
+        if: steps.slot.outputs.make == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

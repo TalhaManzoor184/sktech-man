@@ -74,6 +74,16 @@ export const config = {
   uploadMode: opt("UPLOAD_MODE", "schedule") as "schedule" | "private" | "public",
   /** Local time of day to go public in schedule mode, HH:MM. 19:00 PKT = 10:00 AM New York. */
   publishTime: opt("PUBLISH_TIME", "19:00"),
+  /** Daily YouTube slots, local time. 15:00 = 10 AM London, 19:00 = 10 AM New York, 23:00 = 2 PM New York / 7 PM London. */
+  publishTimes: opt("PUBLISH_TIMES", opt("PUBLISH_TIME", "19:00"))
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => /^\d{1,2}:\d{2}$/.test(t))
+    .sort(),
+  /** The slot whose episode also gets the Facebook/Instagram photo and Story (one of each per day). */
+  primaryTime: opt("PRIMARY_TIME", "19:00"),
+  /** Scheduled runs only make an episode when the next free slot is within this many hours. */
+  slotLookaheadHours: Number(opt("SLOT_LOOKAHEAD_HOURS", "30")),
   publishUtcOffset: Number(opt("PUBLISH_UTC_OFFSET", "5")),
   publishDelayDays: Number(opt("PUBLISH_DELAY_DAYS", "0")),
   /** Meme comedy for teens/adults: not made for kids. */

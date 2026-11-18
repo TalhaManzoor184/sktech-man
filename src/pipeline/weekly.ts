@@ -58,7 +58,7 @@ function pickSlots(history: HistoryEntry[], days: number, now = Date.now()): His
   for (const e of history) {
     const at = new Date(e.publishAt ?? `${e.date}T14:00:00Z`).getTime();
     if (at > now || at <= now - days * 86400_000) continue;
-    const key = (e.publishAt ?? e.date).slice(0, 10);
+    const key = e.publishAt ?? e.date; // one entry per slot (several a day)
     // Entries with a YouTube id first (the original), duplicates after.
     const list = bySlot.get(key) ?? [];
     list.push(e);
