@@ -6,7 +6,7 @@ export const ShotType = z.enum(["wide", "medium", "closeup", "extreme", "peek", 
 export type ShotType = z.infer<typeof ShotType>;
 
 /** Drawn on top of a character. */
-export const Effect = z.enum(["none", "tears", "sweat", "shake", "zzz", "steam", "sparkle", "hearts"]);
+export const Effect = z.enum(["none", "tears", "sweat", "shake", "zzz", "steam", "sparkle", "hearts", "candy"]);
 export type Effect = z.infer<typeof Effect>;
 
 /** Who is in the shot. */

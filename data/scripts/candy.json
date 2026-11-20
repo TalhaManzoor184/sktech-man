@@ -1,0 +1,19 @@
+{
+  "title": "Me: I'll just have ONE candy 😭 #shorts",
+  "description": "Sketch Man finds a mysterious red candy. Self-control has left the chat.",
+  "tags": ["candy", "sugar rush", "relatable", "meme", "funny animation", "sketch man", "self control", "cartoon", "shorts"],
+  "theme": "one mysterious red candy and zero self-control",
+  "pov": "Me: I'll just have ONE candy",
+  "scene": "bedroom",
+  "shots": [
+    { "shot": "peek", "who": "sketch", "focus": "sketch", "expression": "thinking", "action": "idle", "prop": "none", "effect": "none", "sfx": "none", "line": "", "seconds": 1.2 },
+    { "shot": "extreme", "who": "sketch", "focus": "sketch", "expression": "surprised", "action": "idle", "prop": "none", "effect": "sparkle", "sfx": "scratch", "line": "", "seconds": 1.0 },
+    { "shot": "wide", "who": "sketch", "focus": "sketch", "expression": "wink", "action": "idle", "prop": "none", "effect": "candy", "sfx": "ding", "line": "", "seconds": 1.4 },
+    { "shot": "wide", "who": "sketch", "focus": "sketch", "expression": "angry", "action": "stretch", "prop": "none", "effect": "candy", "sfx": "slide", "line": "", "seconds": 1.6 },
+    { "shot": "closeup", "who": "sketch", "focus": "sketch", "expression": "laughing", "action": "idle", "prop": "candy", "effect": "hearts", "sfx": "gulp", "line": "just one.", "seconds": 1.4 },
+    { "shot": "extreme", "who": "sketch", "focus": "sketch", "expression": "overloaded", "action": "tremble", "prop": "none", "effect": "none", "sfx": "boom", "line": "", "seconds": 1.2 },
+    { "shot": "wide", "who": "sketch", "focus": "sketch", "scene": "kitchen", "expression": "overloaded", "action": "run", "prop": "none", "effect": "none", "sfx": "boing", "line": "", "seconds": 1.5 },
+    { "shot": "peek", "who": "bro", "focus": "bro", "scene": "kitchen", "expression": "terrified", "action": "tremble", "prop": "none", "effect": "none", "sfx": "heartbeat", "line": "bro…", "seconds": 1.3 },
+    { "shot": "extreme", "who": "sketch", "focus": "sketch", "scene": "kitchen", "expression": "overloaded", "action": "idle", "prop": "candy", "effect": "sparkle", "sfx": "ding", "line": "", "seconds": 1.4 }
+  ]
+}

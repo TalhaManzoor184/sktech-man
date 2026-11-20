@@ -29,7 +29,7 @@ export const C = {
 } as const;
 
 export type HandShape = "open" | "fist" | "thumb" | "point";
-export type ArmPose = { x: number; y: number; hand: HandShape };
+export type ArmPose = { x: number; y: number; hand: HandShape; /** Rubber-hose arm that reaches past its normal length. */ stretch?: boolean };
 
 export type CharacterPose = {
   armL: ArmPose;
@@ -160,8 +160,12 @@ const Hand: React.FC<{ shape: HandShape }> = ({ shape }) => (
 const Arm: React.FC<{ pose: ArmPose; sleeve: string; shoulders: number }> = ({ pose, sleeve, shoulders }) => {
   const sx = SHOULDER.x;
   const sy = SHOULDER.y - shoulders;
-  const { elbow, hand } = solveArm(sx, sy, pose.x, pose.y);
-  const d = `M ${sx} ${sy} L ${elbow[0].toFixed(1)} ${elbow[1].toFixed(1)} L ${hand[0].toFixed(1)} ${hand[1].toFixed(1)}`;
+  const solved = solveArm(sx, sy, pose.x, pose.y);
+  const elbow = pose.stretch ? [(sx + pose.x) / 2, (sy + pose.y) / 2 - 18] : solved.elbow;
+  const hand = pose.stretch ? [pose.x, pose.y] : solved.hand;
+  const d = pose.stretch
+    ? `M ${sx} ${sy} C ${sx + (pose.x - sx) * 0.3} ${sy - 60} ${sx + (pose.x - sx) * 0.7} ${pose.y + 60} ${pose.x} ${pose.y}`
+    : `M ${sx} ${sy} L ${elbow[0].toFixed(1)} ${elbow[1].toFixed(1)} L ${hand[0].toFixed(1)} ${hand[1].toFixed(1)}`;
   // Short sleeve along the first part of the upper arm.
   const ux = (elbow[0] - sx) / UPPER;
   const uy = (elbow[1] - sy) / UPPER;
@@ -207,7 +211,7 @@ const Leg: React.FC<{ lift: number }> = ({ lift }) => {
 
 /* ---------- face ---------- */
 
-type EyeMode = "open" | "wide" | "arc" | "blink" | "sad" | "angry" | "up" | "tired" | "tiny" | "down";
+type EyeMode = "open" | "wide" | "arc" | "blink" | "sad" | "angry" | "up" | "tired" | "tiny" | "down" | "spiral";
 
 type Face = {
   l: EyeMode;
@@ -232,6 +236,7 @@ const FACES: Record<Expression, Face> = {
   terrified: { l: "tiny", r: "tiny", brow: [18, 12], mouth: "scream" },
   embarrassed: { l: "down", r: "down", brow: [10, -2], mouth: "wobble" },
   furious: { l: "angry", r: "angry", brow: [-16, 8], mouth: "grit" },
+  overloaded: { l: "spiral", r: "spiral", brow: [18, 14], mouth: "bigGrin" },
 };
 
 /** Eye inside a clip region. side: -1 = left, 1 = right. */
@@ -244,6 +249,28 @@ const Eye: React.FC<{ id: string; side: number; mode: EyeMode; cx: number; cy: n
   look,
   lidColor,
 }) => {
+  if (mode === "spiral") {
+    // red-and-white candy swirl filling the eye
+    const arms = [0, 1, 2, 3].map((k) => {
+      const a0 = (k * Math.PI) / 2;
+      let d = `M ${cx} ${cy}`;
+      for (let i = 1; i <= 14; i++) {
+        const a = a0 + i * 0.42;
+        const r = i * 2.2;
+        d += ` L ${(cx + Math.cos(a) * r).toFixed(1)} ${(cy + Math.sin(a) * r).toFixed(1)}`;
+      }
+      return d;
+    });
+    return (
+      <g clipPath={`url(#${id})`}>
+        <circle cx={cx} cy={cy} r={32} fill={C.white} />
+        {arms.map((d, k) => (
+          <path key={k} d={d} fill="none" stroke={k % 2 ? "#D7262E" : C.white} strokeWidth={7} strokeLinecap="round" />
+        ))}
+        <circle cx={cx} cy={cy} r={4} fill="#D7262E" />
+      </g>
+    );
+  }
   if (mode === "arc" || mode === "blink") {
     const d = mode === "arc" ? `M ${cx - 17} ${cy + 6} Q ${cx} ${cy - 14} ${cx + 17} ${cy + 6}` : `M ${cx - 17} ${cy} Q ${cx} ${cy + 7} ${cx + 17} ${cy}`;
     return <path d={d} fill="none" stroke={INK} strokeWidth={6.5} strokeLinecap="round" />;
@@ -386,6 +413,16 @@ const Book: React.FC = () => (
   </g>
 );
 
+/** Round red candy in a twisted clear wrapper (the only saturated red in a scene). */
+export const Candy: React.FC<{ glow?: boolean }> = ({ glow }) => (
+  <g>
+    {glow && <circle r={46} fill="#FFD9A8" opacity={0.55} />}
+    <path d="M -20 0 L -40 -14 L -36 0 L -40 14 Z M 20 0 L 40 -14 L 36 0 L 40 14 Z" fill="#F4F4F4" fillOpacity={0.7} stroke={INK} strokeWidth={3} strokeLinejoin="round" />
+    <circle r={21} fill="#D7262E" stroke={INK} strokeWidth={4} />
+    <path d="M -12 -8 Q -4 -16 8 -12" fill="none" stroke="#FFFFFF" strokeWidth={4} strokeLinecap="round" opacity={0.8} />
+  </g>
+);
+
 /** The yellow pencil from the concept sheet. Drawn pointing up from its base at the origin. */
 export const Pencil: React.FC<{ length?: number }> = ({ length = 120 }) => (
   <g strokeLinejoin="round">
@@ -490,6 +527,11 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
       {prop === "phone" && (
         <g transform={`translate(${(armRHand[0] - 6).toFixed(1)} ${(armRHand[1] + 6).toFixed(1)})`}>
           <Phone />
+        </g>
+      )}
+      {prop === "candy" && (
+        <g transform={`translate(${(armRHand[0] + 4).toFixed(1)} ${(armRHand[1] - 22).toFixed(1)})`}>
+          <Candy />
         </g>
       )}
       {prop === "pencil" && (

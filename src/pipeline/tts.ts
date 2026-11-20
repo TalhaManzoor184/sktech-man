@@ -297,6 +297,7 @@ const EMOTION: Record<Expression, string> = {
   terrified: "terrified, voice shaking",
   embarrassed: "embarrassed and awkward, quiet",
   furious: "furious, about to explode",
+  overloaded: "wildly over-excited, sugar rush, giddy",
 };
 
 const NAME: Record<Speaker, string> = { sketch: "Sketch", bro: "Bro" };

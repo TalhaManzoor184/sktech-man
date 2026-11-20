@@ -4,16 +4,16 @@ import { z } from "zod";
 export const Expression = z.enum([
   "happy", "laughing", "surprised", "thinking", "wink", "sad", "angry", "cool",
   // over-the-top meme faces
-  "exhausted", "cryLaugh", "terrified", "embarrassed", "furious",
+  "exhausted", "cryLaugh", "terrified", "embarrassed", "furious", "overloaded",
 ]);
 export type Expression = z.infer<typeof Expression>;
 
 /** Body animation for a beat. */
-export const Action = z.enum(["idle", "thumbsUp", "point", "run", "shrug", "facepalm", "jump", "panic", "think", "wave", "sleepwalk", "tremble"]);
+export const Action = z.enum(["idle", "thumbsUp", "point", "run", "shrug", "facepalm", "jump", "panic", "think", "wave", "sleepwalk", "tremble", "stretch"]);
 export type Action = z.infer<typeof Action>;
 
 /** Something held in the hands for the whole beat. */
-export const Prop = z.enum(["none", "phone", "laptop", "book", "pencil"]);
+export const Prop = z.enum(["none", "phone", "laptop", "book", "pencil", "candy"]);
 export type Prop = z.infer<typeof Prop>;
 
 /** Sound effect played when the beat starts. All are synthesised, so they are royalty-free. */

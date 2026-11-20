@@ -96,6 +96,12 @@ export function poseFor(action: Action, t: number): BodyPose {
       const s = Math.sin(t * Math.PI * 1.2);
       return { ...base, x: s * 6, tilt: s * 3, headTilt: 10 + s * 4, armL: { x: 104, y: -322, hand: "open" }, armR: { x: 104, y: -322, hand: "open" }, legL: Math.max(0, s) * 0.25, legR: Math.max(0, -s) * 0.25 };
     }
+    case "stretch": {
+      // rubber-hose reach far to the right; grows over the first second
+      const k = Math.min(1, t / 0.9);
+      const wob = Math.sin(t * 14) * 10 * (1 - k * 0.5);
+      return { ...base, tilt: -4, headTilt: -6, armR: { x: 56 + 175 * k, y: -290 + 120 * k + wob, hand: "open", stretch: true } };
+    }
     case "tremble": {
       const s = Math.sin(t * Math.PI * 22);
       return { ...base, x: s * 3.5, headTilt: s * 2, shoulders: 6, armL: { x: 40, y: -250, hand: "fist" }, armR: { x: 40, y: -250, hand: "fist" } };
@@ -110,6 +116,7 @@ const mixArm = (a: ArmPose, b: ArmPose, k: number): ArmPose => ({
   x: a.x + (b.x - a.x) * k,
   y: a.y + (b.y - a.y) * k,
   hand: k < 0.5 ? a.hand : b.hand,
+  stretch: b.stretch,
 });
 
 /** Blend from idle into the action over the first 0.18 s so beat changes don't pop. */

@@ -5,7 +5,7 @@ import { pantomimeFrames, type Effect, type PantomimeProps, type RenderedShot } 
 import { Captions, HAND_FONT, PovBanner } from "./Captions";
 import { blendedPose, idlePose } from "./pose";
 import { GROUND, SceneBackground, SceneDefs, SpeedLines } from "./scenes/Scenes";
-import { C, Character, CharacterDefs, INK } from "./sketch/SketchMan";
+import { C, Candy, Character, CharacterDefs, INK } from "./sketch/SketchMan";
 
 /**
  * Pantomime meme: a quick series of shots (wide, close-up, extreme close-up, peephole, silhouette)
@@ -94,6 +94,21 @@ const Fx: React.FC<{ effect: Effect; t: number }> = ({ effect, t }) => {
           })}
         </g>
       );
+    case "candy": {
+      // a stool with a red velvet cushion and the glowing candy, to the character's right
+      const pulse = 1 + 0.06 * Math.sin(t * 6);
+      return (
+        <g transform="translate(240 0)">
+          <ellipse cx={0} cy={10} rx={70} ry={10} fill={INK} opacity={0.12} />
+          <path d="M -46 0 L -38 -118 M 46 0 L 38 -118 M -42 -50 H 42" stroke={INK} strokeWidth={8} strokeLinecap="round" />
+          <rect x={-58} y={-136} width={116} height={20} rx={6} fill="#A37B52" stroke={INK} strokeWidth={4} />
+          <ellipse cx={0} cy={-142} rx={58} ry={16} fill="#9E2230" stroke={INK} strokeWidth={4} />
+          <g transform={`translate(0 -172) scale(${pulse.toFixed(3)})`}>
+            <Candy glow />
+          </g>
+        </g>
+      );
+    }
     case "hearts":
       return (
         <g fill="#E8556B" stroke={INK} strokeWidth={3}>
@@ -113,6 +128,7 @@ function autoEffect(shot: RenderedShot): Effect {
   if (shot.expression === "cryLaugh") return "tears";
   if (shot.expression === "terrified") return "sweat";
   if (shot.expression === "furious") return "steam";
+  if (shot.expression === "overloaded") return "shake";
   return "none";
 }
 
@@ -140,11 +156,13 @@ export const Pantomime: React.FC<PantomimeProps> = (p) => {
 
   const slots = both
     ? { sketch: { x: 150, s: 0.84, flip: false }, bro: { x: 392, s: 0.84, flip: true } }
-    : { sketch: { x: 270, s: 0.95, flip: false }, bro: { x: 270, s: 0.95, flip: true } };
+    : shot.effect === "candy"
+      ? { sketch: { x: 150, s: 0.95, flip: false }, bro: { x: 150, s: 0.95, flip: false } }
+      : { sketch: { x: 270, s: 0.95, flip: false }, bro: { x: 270, s: 0.95, flip: true } };
   const cam = CAM[shot.shot];
   const fs = slots[focus];
   // Aim at the face for close shots, at the middle of the body for wide ones.
-  const fx = cam.face ? fs.x : both ? 270 : fs.x;
+  const fx = cam.face ? fs.x : both || shot.effect === "candy" ? 270 : fs.x;
   const fy = cam.face ? GROUND - 440 * fs.s : 560;
   // Punch-in on every cut, and a shake on extreme close-ups.
   const punch = interpolate(lf, [0, 5], [1.08, 1], { extrapolateRight: "clamp" });

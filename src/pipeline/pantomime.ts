@@ -22,6 +22,7 @@ import { isPrimarySlot, uploadShort } from "./upload";
  *   npm run pantomime                        write, render, upload (UPLOAD_MODE decides public/scheduled)
  *   npm run pantomime -- --no-upload         render only
  *   npm run pantomime -- --sample            use data/sample-pantomime.json (no writer)
+ *   npm run pantomime -- --script=file.json  use a hand-written shot list
  *   npm run pantomime -- --tts=espeak        offline robot voice (testing only)
  */
 
@@ -55,8 +56,10 @@ async function main() {
 
   // 1. Script
   let script: PantomimeScript;
-  if (args.has("sample")) {
-    script = PantomimeScript.parse(JSON.parse(await fs.readFile(path.join(ROOT, "data/sample-pantomime.json"), "utf8")));
+  const scriptFile = args.get("script") || (args.has("sample") ? "data/sample-pantomime.json" : "");
+  if (scriptFile) {
+    script = PantomimeScript.parse(JSON.parse(await fs.readFile(path.resolve(ROOT, scriptFile), "utf8")));
+    console.log(`Script: ${scriptFile}`);
   } else {
     const trends = await trendingNotes();
     script = await writePantomime(history, trends);
