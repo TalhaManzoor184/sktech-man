@@ -58,6 +58,13 @@ export const config = {
       pitch: Number(opt("BRO_PITCH", "1.0")),
       speed: Number(opt("VOICE_SPEED", "1.0")),
     } satisfies VoiceSpec,
+    bibo: {
+      gemini: opt("BIBO_VOICE", "Zephyr"),
+      style: opt("BIBO_STYLE", "Bibo is a tiny, squeaky, curious little creature; childlike, breathy and expressive"),
+      espeakPitch: "85",
+      pitch: Number(opt("BIBO_PITCH", "1.0")),
+      speed: Number(opt("VOICE_SPEED", "1.0")),
+    } satisfies VoiceSpec,
   },
 
   // Lip sync

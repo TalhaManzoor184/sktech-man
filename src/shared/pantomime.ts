@@ -42,7 +42,17 @@ export const Shot = z.object({
 });
 export type Shot = z.infer<typeof Shot>;
 
+/** Which drawn character plays each slot. Default: Sketch Man leads, Bro is the friend. */
+export const Cast = z.object({
+  sketch: z.enum(["sketch", "bro", "bibo"]).default("sketch"),
+  bro: z.enum(["sketch", "bro", "bibo"]).default("bro"),
+});
+export type Cast = z.infer<typeof Cast>;
+
 export const PantomimeScript = z.object({
+  cast: Cast.default({ sketch: "sketch", bro: "bro" }),
+  /** "vintage" adds the warm brown vignette of the Bibo storyboard. */
+  look: z.enum(["clean", "vintage"]).default("clean"),
   title: z.string().min(5).max(90),
   description: z.string().min(10).max(900),
   tags: z.array(z.string()).min(3).max(15),
@@ -63,6 +73,8 @@ export type RenderedShot = Shot & {
 };
 
 export type PantomimeProps = {
+  cast?: Cast;
+  look?: "clean" | "vintage";
   pov: string;
   scene: z.infer<typeof Scene>;
   shots: RenderedShot[];

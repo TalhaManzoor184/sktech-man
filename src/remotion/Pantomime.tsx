@@ -190,7 +190,7 @@ export const Pantomime: React.FC<PantomimeProps> = (p) => {
         <g
           transform={`translate(${(slot.x + pose.x).toFixed(1)} ${(GROUND + pose.y * s).toFixed(1)}) rotate(${pose.tilt.toFixed(2)}) scale(${(slot.flip ? -s : s).toFixed(3)} ${s.toFixed(3)})`}
         >
-          <Character id={who} variant={who} expression={expression} mouth={mouth} blink={blink} pose={pose} prop={isFocus ? shot.prop : "none"} look={[slot.flip ? 5 : -5, 0]} />
+          <Character id={who} variant={cast[who]} expression={expression} mouth={mouth} blink={blink} pose={pose} prop={isFocus ? shot.prop : "none"} look={[slot.flip ? 5 : -5, 0]} />
           {isFocus && fx2 !== "none" && shot.shot !== "silhouette" && (
             <g transform={slot.flip ? "scale(-1 1)" : undefined}>
               <Fx effect={fx2} t={t} />
@@ -201,7 +201,8 @@ export const Pantomime: React.FC<PantomimeProps> = (p) => {
     );
   };
 
-  const cast: ("sketch" | "bro")[] = both ? ["bro", "sketch"] : [focus];
+  const cast = p.cast ?? { sketch: "sketch", bro: "bro" };
+  const inShot: ("sketch" | "bro")[] = both ? ["bro", "sketch"] : [focus];
   const sil = shot.shot === "silhouette";
 
   return (
@@ -226,17 +227,21 @@ export const Pantomime: React.FC<PantomimeProps> = (p) => {
           </radialGradient>
         </defs>
         <SceneDefs />
-        <CharacterDefs id="sketch" variant="sketch" />
-        <CharacterDefs id="bro" variant="bro" />
+        <CharacterDefs id="sketch" variant={cast.sketch} />
+        <CharacterDefs id="bro" variant={cast.bro} />
+        <radialGradient id="vintageVig" cx="50%" cy="48%" r="68%">
+          <stop offset="0.55" stopColor="#7A5C3E" stopOpacity={0} />
+          <stop offset="1" stopColor="#5A3E24" stopOpacity={0.7} />
+        </radialGradient>
         <g filter="url(#boilP)">
           <g
             transform={`translate(${(cx + shake).toFixed(1)} ${cy}) scale(${(zoom * stretch).toFixed(3)} ${(zoom / stretch).toFixed(3)}) translate(${-fx} ${-fy})`}
           >
             <SceneBackground scene={scene} f={frame} />
             {sil && <rect x={-200} y={-200} width={940} height={1360} fill="url(#backlight)" />}
-            <g filter={sil ? "url(#toBlack)" : undefined}>{cast.map(renderOne)}</g>
+            <g filter={sil ? "url(#toBlack)" : undefined}>{inShot.map(renderOne)}</g>
             {sil &&
-              cast.map((who) => {
+              inShot.map((who) => {
                 const slot = slots[who];
                 return (
                   <g key={`eyes-${who}`} fill="#FFFFFF">
@@ -247,6 +252,12 @@ export const Pantomime: React.FC<PantomimeProps> = (p) => {
               })}
           </g>
         </g>
+        {p.look === "vintage" && (
+          <>
+            <rect width={540} height={960} fill="#E9C996" opacity={0.12} />
+            <rect width={540} height={960} fill="url(#vintageVig)" />
+          </>
+        )}
         {shot.shot === "peek" && <rect width={540} height={960} fill="url(#peekHole)" opacity={0.92} />}
         <PovBanner text={p.pov} frame={frame} />
         {shot.audioFile && t <= shot.duration + 0.2 && <Captions words={shot.words} t={t} appear={interpolate(lf, [0, 4], [0, 1], { extrapolateRight: "clamp" })} />}

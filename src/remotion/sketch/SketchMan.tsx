@@ -11,6 +11,10 @@ import type { Expression, MouthShape, Prop } from "../../shared/episode";
  */
 
 export const INK = "#1B1B1B";
+/** Bibo's colours (see the storyboard): putty skin, dusty-mustard sweater, brown patch. */
+export const BIBO = { skin: "#E7DFCB", sweater: "#CFA14A", knit: "#A9822F", patch: "#7A5C3E" } as const;
+/** Bibo's head: a wide upside-down egg, wider at the top. */
+const BIBO_HEAD = "M -104 -468 C -106 -566 106 -566 104 -468 C 102 -398 62 -348 0 -346 C -62 -348 -102 -398 -104 -468 Z";
 export const C = {
   ink: INK,
   skin: "#FBF6EC",
@@ -43,7 +47,7 @@ export type CharacterPose = {
   shoulders: number;
 };
 
-export type Variant = "sketch" | "bro";
+export type Variant = "sketch" | "bro" | "bibo";
 
 /* ---------- helpers ---------- */
 
@@ -194,7 +198,7 @@ const Shoe: React.FC = () => (
   </g>
 );
 
-const Leg: React.FC<{ lift: number }> = ({ lift }) => {
+const Leg: React.FC<{ lift: number; bare?: boolean }> = ({ lift, bare }) => {
   const ax = HIP.x + 10;
   const ay = -44 - lift * 62;
   const kx = HIP.x + 6 + lift * 34;
@@ -203,7 +207,7 @@ const Leg: React.FC<{ lift: number }> = ({ lift }) => {
     <g>
       <path d={`M ${HIP.x} ${HIP.y} L ${kx.toFixed(1)} ${ky.toFixed(1)} L ${ax} ${ay.toFixed(1)}`} fill="none" stroke={INK} strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" />
       <g transform={`translate(${ax} ${(ay + 30).toFixed(1)})`}>
-        <Shoe />
+        {bare ? <ellipse cx={14} cy={-6} rx={30} ry={13} fill={BIBO.skin} stroke={INK} strokeWidth={5} /> : <Shoe />}
       </g>
     </g>
   );
@@ -240,7 +244,7 @@ const FACES: Record<Expression, Face> = {
 };
 
 /** Eye inside a clip region. side: -1 = left, 1 = right. */
-const Eye: React.FC<{ id: string; side: number; mode: EyeMode; cx: number; cy: number; look: [number, number]; lidColor: string }> = ({
+const Eye: React.FC<{ id: string; side: number; mode: EyeMode; cx: number; cy: number; look: [number, number]; lidColor: string; pupil?: number }> = ({
   id,
   side,
   mode,
@@ -248,6 +252,7 @@ const Eye: React.FC<{ id: string; side: number; mode: EyeMode; cx: number; cy: n
   cy,
   look,
   lidColor,
+  pupil = 1,
 }) => {
   if (mode === "spiral") {
     // red-and-white candy swirl filling the eye
@@ -275,7 +280,7 @@ const Eye: React.FC<{ id: string; side: number; mode: EyeMode; cx: number; cy: n
     const d = mode === "arc" ? `M ${cx - 17} ${cy + 6} Q ${cx} ${cy - 14} ${cx + 17} ${cy + 6}` : `M ${cx - 17} ${cy} Q ${cx} ${cy + 7} ${cx + 17} ${cy}`;
     return <path d={d} fill="none" stroke={INK} strokeWidth={6.5} strokeLinecap="round" />;
   }
-  const r = mode === "wide" ? 7.5 : mode === "tiny" ? 4.5 : 11.5;
+  const r = (mode === "wide" ? 7.5 : mode === "tiny" ? 4.5 : 11.5) * pupil;
   let px = cx + look[0];
   let py = cy + look[1];
   if (mode === "up") {
@@ -455,7 +460,13 @@ export const CharacterDefs: React.FC<{ id: string; variant: Variant }> = ({ id, 
     <defs>
       {[-1, 1].map((side) => (
         <clipPath key={side} id={`${id}-eye${side}`}>
-          {sketch ? <circle cx={side * 40} cy={-436} r={30} /> : <ellipse cx={side * 34} cy={-438} rx={23} ry={28} />}
+          {sketch ? (
+            <circle cx={side * 40} cy={-436} r={30} />
+          ) : variant === "bibo" ? (
+            <ellipse cx={side * 36} cy={-446} rx={27} ry={38} />
+          ) : (
+            <ellipse cx={side * 34} cy={-438} rx={23} ry={28} />
+          )}
         </clipPath>
       ))}
       <mask id={`${id}-shade`}>
@@ -472,9 +483,11 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
   const cool = expression === "cool";
   const eyeL: EyeMode = blink && (face.l === "open" || face.l === "up") ? "blink" : face.l;
   const eyeR: EyeMode = blink && (face.r === "open" || face.r === "up") ? "blink" : face.r;
-  const shirt = sketch ? C.shirt : C.hoodie;
-  const eyeX = sketch ? 40 : 34;
-  const eyeY = sketch ? -436 : -438;
+  const bibo = variant === "bibo";
+  const shirt = sketch ? C.shirt : bibo ? BIBO.sweater : C.hoodie;
+  const skin = bibo ? BIBO.skin : C.skin;
+  const eyeX = sketch ? 40 : bibo ? 36 : 34;
+  const eyeY = sketch ? -436 : bibo ? -446 : -438;
 
   // Props override the hands so they actually hold the thing.
   let armL = pose.armL;
@@ -494,14 +507,24 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
       <ellipse cx={0} cy={14} rx={92} ry={12} fill={INK} opacity={0.12} />
       {/* legs */}
       <g transform="scale(-1 1)">
-        <Leg lift={pose.legL} />
+        <Leg lift={pose.legL} bare={bibo} />
       </g>
-      <Leg lift={pose.legR} />
+      <Leg lift={pose.legR} bare={bibo} />
 
       {/* torso */}
       <g transform={`translate(0 ${-pose.shoulders * 0.4})`}>
-        <path d="M -42 -322 Q 0 -334 42 -322 L 36 -206 Q 0 -198 -36 -206 Z" fill={shirt} stroke={INK} strokeWidth={5} strokeLinejoin="round" />
-        {sketch ? (
+        {bibo ? (
+          <>
+            {/* oversized knitted sweater */}
+            <path d="M -50 -326 Q 0 -342 50 -326 Q 66 -270 62 -196 Q 0 -182 -62 -196 Q -66 -270 -50 -326 Z" fill={shirt} stroke={INK} strokeWidth={5} strokeLinejoin="round" />
+            <path d="M -58 -210 Q 0 -198 58 -210" fill="none" stroke={BIBO.knit} strokeWidth={4} />
+            <path d="M -34 -318 V -214 M -14 -322 V -208 M 6 -322 V -206 M 26 -320 V -208 M 44 -314 V -212" stroke={BIBO.knit} strokeWidth={2} opacity={0.6} />
+            <rect x={-48} y={-282} width={26} height={24} rx={3} fill={BIBO.patch} stroke={INK} strokeWidth={3} transform="rotate(-6 -35 -270)" />
+          </>
+        ) : (
+          <path d="M -42 -322 Q 0 -334 42 -322 L 36 -206 Q 0 -198 -36 -206 Z" fill={shirt} stroke={INK} strokeWidth={5} strokeLinejoin="round" />
+        )}
+        {bibo ? null : sketch ? (
           <>
             <path d="M -30 -320 Q -34 -270 -28 -226" fill="none" stroke="#4A4A4A" strokeWidth={7} strokeLinecap="round" />
             <path d="M 14 -300 l 16 16 M 10 -286 l 20 20 M 8 -270 l 22 22 M 8 -252 l 20 20" stroke={INK} strokeWidth={1.4} opacity={0.35} />
@@ -543,11 +566,14 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
       {/* head */}
       <g transform={`rotate(${pose.headTilt.toFixed(2)} 0 -330) translate(0 ${-pose.shoulders * 0.4})`}>
         <path d="M -8 -350 V -320 M 8 -350 V -320" stroke={INK} strokeWidth={5} />
-        <rect x={-8} y={-352} width={16} height={32} fill={C.skin} />
-        {[-1, 1].map((s) => (
-          <ellipse key={s} cx={s * 86} cy={-436} rx={14} ry={20} fill={C.skin} stroke={INK} strokeWidth={5} />
-        ))}
-        <ellipse cx={HEAD.cx} cy={HEAD.cy} rx={HEAD.rx} ry={HEAD.ry} fill={C.skin} stroke={INK} strokeWidth={6} />
+        <rect x={-8} y={-352} width={16} height={32} fill={skin} />
+        {!bibo &&
+          [-1, 1].map((s) => <ellipse key={s} cx={s * 86} cy={-436} rx={14} ry={20} fill={C.skin} stroke={INK} strokeWidth={5} />)}
+        {bibo ? (
+          <path d={BIBO_HEAD} fill={skin} stroke={INK} strokeWidth={6} strokeLinejoin="round" />
+        ) : (
+          <ellipse cx={HEAD.cx} cy={HEAD.cy} rx={HEAD.rx} ry={HEAD.ry} fill={C.skin} stroke={INK} strokeWidth={6} />
+        )}
         <g mask={`url(#${id}-shade)`}>
           <path
             d={Array.from({ length: 26 }, (_, i) => `M ${-60 + i * 8} -330 l 46 -46`).join(" ") + " " + Array.from({ length: 30 }, (_, i) => `M ${10 + i * 6} -560 l 4 240`).join(" ")}
@@ -557,7 +583,10 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
           />
         </g>
 
-        {sketch ? (
+        {bibo ? (
+          /* one question-mark curl */
+          <path d="M 0 -548 C -4 -586 26 -612 48 -598 C 70 -584 58 -556 36 -560 C 22 -563 22 -578 32 -582" fill="none" stroke={INK} strokeWidth={7} strokeLinecap="round" />
+        ) : sketch ? (
           <>
             {/* hair */}
             <path d={HAIR.cap} fill={INK} stroke={INK} strokeWidth={4} strokeLinejoin="round" />
@@ -591,6 +620,8 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
           <React.Fragment key={side}>
             {sketch ? (
               <circle cx={side * eyeX} cy={eyeY} r={30} fill={C.white} />
+            ) : bibo ? (
+              <ellipse cx={side * eyeX} cy={eyeY} rx={27} ry={38} fill={C.white} stroke={INK} strokeWidth={6} />
             ) : (
               <ellipse cx={side * eyeX} cy={eyeY} rx={23} ry={28} fill={C.white} stroke={INK} strokeWidth={5} />
             )}
@@ -602,7 +633,8 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
                 cx={side * eyeX + (side < 0 ? 3 : -3)}
                 cy={eyeY + 2}
                 look={look}
-                lidColor={sketch ? C.white : C.skin}
+                lidColor={sketch ? C.white : skin}
+                pupil={bibo ? 0.55 : 1}
               />
             )}
           </React.Fragment>
@@ -624,8 +656,8 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
         )}
 
         {/* brows */}
-        <Brow side={-1} cx={-eyeX} y={sketch ? -482 : -480} off={face.brow} thick={sketch ? 8 : 9} />
-        <Brow side={1} cx={eyeX} y={sketch ? -482 : -480} off={face.browR ?? face.brow} thick={sketch ? 8 : 9} />
+        {!bibo && <Brow side={-1} cx={-eyeX} y={sketch ? -482 : -480} off={face.brow} thick={sketch ? 8 : 9} />}
+        {!bibo && <Brow side={1} cx={eyeX} y={sketch ? -482 : -480} off={face.browR ?? face.brow} thick={sketch ? 8 : 9} />}
 
         {/* meme extras */}
         {expression === "exhausted" &&
@@ -637,7 +669,7 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
         {expression === "furious" && <ellipse cx={0} cy={-440} rx={84} ry={94} fill="#E04A3A" opacity={0.22} />}
 
         {/* nose + mouth */}
-        <path d="M -2 -412 Q 8 -404 0 -398" fill="none" stroke={INK} strokeWidth={3.5} strokeLinecap="round" />
+        {!bibo && <path d="M -2 -412 Q 8 -404 0 -398" fill="none" stroke={INK} strokeWidth={3.5} strokeLinecap="round" />}
         <Mouth shape={mouth ?? face.mouth} />
       </g>
     </g>

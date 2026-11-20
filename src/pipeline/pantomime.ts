@@ -78,7 +78,8 @@ async function main() {
     const idx = script.shots.map((s, i) => (s.line && s.focus === who ? i : -1)).filter((i) => i >= 0);
     if (!idx.length) continue;
     const files = idx.map((i) => `line-${String(i + 1).padStart(2, "0")}.wav`);
-    const out = await voiceEpisode(idx.map((i) => script.shots[i].line), files.map((f) => path.join(publicDir, f)), config.voices[who], who);
+    const who2 = script.cast[who];
+    const out = await voiceEpisode(idx.map((i) => script.shots[i].line), files.map((f) => path.join(publicDir, f)), config.voices[who2], who2);
     idx.forEach((i, k) => voiced.set(i, { file: files[k], duration: out[k].duration, words: out[k].words, wav: out[k].wavPath }));
   }
   const shots: RenderedShot[] = [];
@@ -110,6 +111,8 @@ async function main() {
   }
 
   const props: PantomimeProps = {
+    cast: script.cast,
+    look: script.look,
     pov: script.pov,
     scene: script.scene,
     shots,
