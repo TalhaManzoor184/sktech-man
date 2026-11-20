@@ -80,6 +80,9 @@ Use the big faces (exhausted, cryLaugh, terrified, embarrassed, furious) and eff
 Example (do not reuse): pov "Me pretending I'm not scared of the dark"; shots: wide bedroom, sketch cool thumbsUp; closeup sketch thinking (sfx heartbeat);
 peek: bro silhouette in doorway; extreme sketch terrified tremble effect sweat (sfx scratch); wide sketch run (sfx slide); closeup bro cryLaugh tears (line "bro.").
 
+Only write gags the animation can show: Sketch Man ALWAYS wears his glasses (never base a joke on taking them off),
+the only props are phone, laptop, book and pencil, and the sets are the listed scenes. The joke must come from faces, poses,
+camera cuts and timing, not from objects we can't draw.
 Clean comedy only: no swearing, romance, violence, politics, religion, real people, brands, or other cartoon characters.
 Write the title and the on-screen text in ${config.contentLanguage}.`;
 }
