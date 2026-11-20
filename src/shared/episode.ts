@@ -1,11 +1,15 @@
 import { z } from "zod";
 
 /** Faces from the Sketch Man concept sheet. "cool" swaps the glasses for sunglasses. */
-export const Expression = z.enum(["happy", "laughing", "surprised", "thinking", "wink", "sad", "angry", "cool"]);
+export const Expression = z.enum([
+  "happy", "laughing", "surprised", "thinking", "wink", "sad", "angry", "cool",
+  // over-the-top meme faces
+  "exhausted", "cryLaugh", "terrified", "embarrassed", "furious",
+]);
 export type Expression = z.infer<typeof Expression>;
 
 /** Body animation for a beat. */
-export const Action = z.enum(["idle", "thumbsUp", "point", "run", "shrug", "facepalm", "jump", "panic", "think", "wave"]);
+export const Action = z.enum(["idle", "thumbsUp", "point", "run", "shrug", "facepalm", "jump", "panic", "think", "wave", "sleepwalk", "tremble"]);
 export type Action = z.infer<typeof Action>;
 
 /** Something held in the hands for the whole beat. */
@@ -13,11 +17,11 @@ export const Prop = z.enum(["none", "phone", "laptop", "book", "pencil"]);
 export type Prop = z.infer<typeof Prop>;
 
 /** Sound effect played when the beat starts. All are synthesised, so they are royalty-free. */
-export const Sfx = z.enum(["none", "boom", "whoosh", "ding", "pop", "sad", "drumroll"]);
+export const Sfx = z.enum(["none", "boom", "whoosh", "ding", "pop", "sad", "drumroll", "slide", "boing", "scratch", "snore", "heartbeat", "gulp"]);
 export type Sfx = z.infer<typeof Sfx>;
 
 /** Hand-drawn sets. */
-export const Scene = z.enum(["classroom", "bedroom", "street", "kitchen", "paper"]);
+export const Scene = z.enum(["classroom", "bedroom", "street", "kitchen", "paper", "bathroom", "office"]);
 export type Scene = z.infer<typeof Scene>;
 
 /** Who is talking. "bro" is Sketch Man's best friend. */

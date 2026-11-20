@@ -292,6 +292,11 @@ const EMOTION: Record<Expression, string> = {
   sad: "disappointed and deflated, with a small sigh",
   angry: "frustrated and annoyed, exasperated",
   cool: "smug and confident, totally relaxed",
+  exhausted: "completely exhausted, half asleep, slurred and slow",
+  cryLaugh: "laughing so hard it's hard to talk, wheezing",
+  terrified: "terrified, voice shaking",
+  embarrassed: "embarrassed and awkward, quiet",
+  furious: "furious, about to explode",
 };
 
 const NAME: Record<Speaker, string> = { sketch: "Sketch", bro: "Bro" };

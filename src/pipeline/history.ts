@@ -7,6 +7,8 @@ export type HistoryEntry = {
   theme: string;
   /** The on-screen POV setup (used by the weekly compilation). */
   pov?: string;
+  /** "pantomime" for the no-dialogue meme style; empty for regular talking episodes. */
+  style?: string;
   videoId?: string;
   publishAt?: string;
   facebookVideoId?: string;

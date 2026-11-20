@@ -207,7 +207,7 @@ const Leg: React.FC<{ lift: number }> = ({ lift }) => {
 
 /* ---------- face ---------- */
 
-type EyeMode = "open" | "wide" | "arc" | "blink" | "sad" | "angry" | "up";
+type EyeMode = "open" | "wide" | "arc" | "blink" | "sad" | "angry" | "up" | "tired" | "tiny" | "down";
 
 type Face = {
   l: EyeMode;
@@ -215,7 +215,7 @@ type Face = {
   /** Brow offsets: [inner, outer] in px, positive = higher. */
   brow: [number, number];
   browR?: [number, number];
-  mouth: MouthShape | "grin" | "bigGrin" | "frown" | "hmm" | "grit" | "smirk" | "o";
+  mouth: MouthShape | "grin" | "bigGrin" | "frown" | "hmm" | "grit" | "smirk" | "o" | "hang" | "scream" | "wobble";
 };
 
 const FACES: Record<Expression, Face> = {
@@ -227,6 +227,11 @@ const FACES: Record<Expression, Face> = {
   sad: { l: "sad", r: "sad", brow: [10, -4], mouth: "frown" },
   angry: { l: "angry", r: "angry", brow: [-10, 6], mouth: "grit" },
   cool: { l: "open", r: "open", brow: [0, 4], mouth: "smirk" },
+  exhausted: { l: "tired", r: "tired", brow: [-4, -8], mouth: "hang" },
+  cryLaugh: { l: "arc", r: "arc", brow: [10, 2], mouth: "bigGrin" },
+  terrified: { l: "tiny", r: "tiny", brow: [18, 12], mouth: "scream" },
+  embarrassed: { l: "down", r: "down", brow: [10, -2], mouth: "wobble" },
+  furious: { l: "angry", r: "angry", brow: [-16, 8], mouth: "grit" },
 };
 
 /** Eye inside a clip region. side: -1 = left, 1 = right. */
@@ -243,7 +248,7 @@ const Eye: React.FC<{ id: string; side: number; mode: EyeMode; cx: number; cy: n
     const d = mode === "arc" ? `M ${cx - 17} ${cy + 6} Q ${cx} ${cy - 14} ${cx + 17} ${cy + 6}` : `M ${cx - 17} ${cy} Q ${cx} ${cy + 7} ${cx + 17} ${cy}`;
     return <path d={d} fill="none" stroke={INK} strokeWidth={6.5} strokeLinecap="round" />;
   }
-  const r = mode === "wide" ? 7.5 : 11.5;
+  const r = mode === "wide" ? 7.5 : mode === "tiny" ? 4.5 : 11.5;
   let px = cx + look[0];
   let py = cy + look[1];
   if (mode === "up") {
@@ -251,9 +256,17 @@ const Eye: React.FC<{ id: string; side: number; mode: EyeMode; cx: number; cy: n
     py = cy - 11;
   }
   if (mode === "sad") py += 6;
+  if (mode === "tired") py += 9;
+  if (mode === "down") {
+    py = cy + 13;
+    px = cx + look[0] * 0.5;
+  }
   // Upper eyelid line for sad / angry. inner = toward the nose.
   let lid: string | null = null;
-  if (mode === "sad" || mode === "angry") {
+  if (mode === "tired") {
+    // heavy, half-closed lids
+    lid = `M ${cx - 36} ${cy + 1} Q ${cx} ${cy + 6} ${cx + 36} ${cy + 1} L ${cx + 36} ${cy - 60} L ${cx - 36} ${cy - 60} Z`;
+  } else if (mode === "sad" || mode === "angry") {
     const inner = cx - side * 34;
     const outer = cx + side * 34;
     const yi = mode === "angry" ? cy - 2 : cy - 22;
@@ -273,7 +286,7 @@ type MouthDef = { line?: string; d?: string; ell?: [number, number, number, numb
 
 // Mouth centre is (0, -382).
 const MY = -382;
-const MOUTHS: Record<Face["mouth"], MouthDef> = {
+const MOUTHS = {
   grin: { d: `M -30 ${MY - 6} Q 0 ${MY - 2} 30 ${MY - 6} Q 26 ${MY + 30} 0 ${MY + 30} Q -26 ${MY + 30} -30 ${MY - 6} Z`, tongue: [4, MY + 21, 13, 7] },
   bigGrin: {
     d: `M -36 ${MY - 10} Q 0 ${MY - 4} 36 ${MY - 10} Q 32 ${MY + 40} 0 ${MY + 40} Q -32 ${MY + 40} -36 ${MY - 10} Z`,
@@ -303,8 +316,19 @@ const MOUTHS: Record<Face["mouth"], MouthDef> = {
   H: { d: `M -22 ${MY - 6} Q 0 ${MY - 2} 22 ${MY - 6} Q 20 ${MY + 22} 0 ${MY + 22} Q -20 ${MY + 22} -22 ${MY - 6} Z`, tongue: [0, MY + 6, 9, 6] },
 };
 
+// Extra meme mouths.
+const MOUTHS_ALL: Record<Face["mouth"], MouthDef> = Object.assign({} as Record<string, MouthDef>, MOUTHS, {
+  hang: { d: `M -6 ${MY + 2} Q 6 ${MY} 16 ${MY + 4} Q 20 ${MY + 34} 6 ${MY + 38} Q -8 ${MY + 34} -6 ${MY + 2} Z`, tongue: [6, MY + 30, 7, 5] },
+  scream: {
+    d: `M -40 ${MY - 12} Q 0 ${MY - 20} 40 ${MY - 12} Q 44 ${MY + 52} 0 ${MY + 58} Q -44 ${MY + 52} -40 ${MY - 12} Z`,
+    tongue: [0, MY + 46, 18, 8],
+    teeth: `M -34 ${MY - 11} Q 0 ${MY - 17} 34 ${MY - 11} L 32 ${MY - 2} Q 0 ${MY - 6} -32 ${MY - 2} Z`,
+  },
+  wobble: { line: `M -18 ${MY + 4} q 6 -6 12 0 t 12 0 t 12 0` },
+} satisfies Record<string, MouthDef>) as Record<Face["mouth"], MouthDef>;
+
 const Mouth: React.FC<{ shape: Face["mouth"] }> = ({ shape }) => {
-  const m = MOUTHS[shape];
+  const m = MOUTHS_ALL[shape];
   if (m.line) return <path d={m.line} fill="none" stroke={INK} strokeWidth={6} strokeLinecap="round" />;
   return (
     <g>
@@ -560,6 +584,15 @@ export const Character: React.FC<CharacterProps> = ({ id, variant, expression, m
         {/* brows */}
         <Brow side={-1} cx={-eyeX} y={sketch ? -482 : -480} off={face.brow} thick={sketch ? 8 : 9} />
         <Brow side={1} cx={eyeX} y={sketch ? -482 : -480} off={face.browR ?? face.brow} thick={sketch ? 8 : 9} />
+
+        {/* meme extras */}
+        {expression === "exhausted" &&
+          [-1, 1].map((s) => (
+            <path key={s} d={`M ${s * eyeX - 24} ${eyeY + 34} Q ${s * eyeX} ${eyeY + 48} ${s * eyeX + 24} ${eyeY + 34}`} fill="none" stroke={C.pink} strokeWidth={5} strokeLinecap="round" opacity={0.85} />
+          ))}
+        {expression === "embarrassed" &&
+          [-1, 1].map((s) => <ellipse key={s} cx={s * 62} cy={-392} rx={20} ry={11} fill={C.pink} opacity={0.6} />)}
+        {expression === "furious" && <ellipse cx={0} cy={-440} rx={84} ry={94} fill="#E04A3A" opacity={0.22} />}
 
         {/* nose + mouth */}
         <path d="M -2 -412 Q 8 -404 0 -398" fill="none" stroke={INK} strokeWidth={3.5} strokeLinecap="round" />

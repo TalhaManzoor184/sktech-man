@@ -1,0 +1,17 @@
+{
+  "title": "Me after 3 hours of sleep: I'm totally fine 😭 #shorts",
+  "description": "Sketch Man swears he slept enough. His face disagrees.",
+  "tags": ["relatable", "no sleep", "meme", "funny animation", "sketch man", "student life", "monday", "tired", "shorts"],
+  "theme": "pretending 3 hours of sleep is fine",
+  "pov": "Me after 3 hours of sleep: I'm totally fine",
+  "scene": "office",
+  "shots": [
+    { "shot": "wide", "who": "sketch", "focus": "sketch", "expression": "cool", "action": "thumbsUp", "prop": "none", "effect": "sparkle", "sfx": "ding", "line": "", "seconds": 1.3 },
+    { "shot": "closeup", "who": "sketch", "focus": "sketch", "expression": "exhausted", "action": "idle", "prop": "none", "effect": "zzz", "sfx": "snore", "line": "", "seconds": 1.5 },
+    { "shot": "medium", "who": "sketch", "focus": "sketch", "scene": "bathroom", "expression": "exhausted", "action": "sleepwalk", "prop": "none", "effect": "none", "sfx": "slide", "line": "", "seconds": 1.5 },
+    { "shot": "peek", "who": "bro", "focus": "bro", "scene": "bathroom", "expression": "surprised", "action": "idle", "prop": "none", "effect": "none", "sfx": "scratch", "line": "bro…", "seconds": 1.2 },
+    { "shot": "extreme", "who": "sketch", "focus": "sketch", "scene": "bathroom", "expression": "exhausted", "action": "idle", "prop": "none", "effect": "none", "sfx": "gulp", "line": "", "seconds": 1.2 },
+    { "shot": "silhouette", "who": "both", "focus": "bro", "scene": "bathroom", "expression": "furious", "otherExpression": "terrified", "action": "idle", "prop": "none", "effect": "none", "sfx": "boom", "line": "", "seconds": 1.3 },
+    { "shot": "extreme", "who": "both", "focus": "bro", "scene": "bathroom", "expression": "cryLaugh", "otherExpression": "embarrassed", "action": "tremble", "prop": "none", "effect": "tears", "sfx": "boing", "line": "", "seconds": 1.4 }
+  ]
+}

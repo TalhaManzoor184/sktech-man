@@ -201,6 +201,61 @@ const Paper: React.FC<{ f: number }> = ({ f }) => (
   </g>
 );
 
+const Bathroom: React.FC<{ f: number }> = () => (
+  <g>
+    <rect width={540} height={960} fill="#E3E7E4" />
+    {Array.from({ length: 10 }, (_, i) => (
+      <path key={`v${i}`} d={`M ${i * 60} 300 V ${GROUND - 40}`} stroke={LINE} strokeWidth={1.4} opacity={0.35} />
+    ))}
+    {Array.from({ length: 9 }, (_, i) => (
+      <path key={`h${i}`} d={`M 0 ${300 + i * 60} H 540`} stroke={LINE} strokeWidth={1.4} opacity={0.35} />
+    ))}
+    <path d="M 0 300 H 540" stroke={LINE} strokeWidth={4} />
+    {/* mirror + sink */}
+    <rect x={60} y={330} width={130} height={170} rx={60} fill="#CFE0E8" stroke={LINE} strokeWidth={5} />
+    <path d="M 90 380 l 30 -30 M 100 420 l 50 -50" stroke="#fff" strokeWidth={6} strokeLinecap="round" opacity={0.8} />
+    <path d="M 40 560 H 210 Q 205 620 125 625 Q 45 620 40 560 Z" fill="#F7F7F4" stroke={LINE} strokeWidth={5} strokeLinejoin="round" />
+    <rect x={112} y={622} width={26} height={150} fill="#F7F7F4" stroke={LINE} strokeWidth={4} />
+    <path d="M 118 560 V 530 H 138" fill="none" stroke={LINE} strokeWidth={6} strokeLinecap="round" />
+    {/* toilet */}
+    <g transform={`translate(400 ${GROUND - 40})`}>
+      <rect x={-20} y={-250} width={110} height={90} rx={10} fill="#F7F7F4" stroke={LINE} strokeWidth={5} />
+      <path d="M -60 -160 H 100 Q 100 -100 50 -90 L 40 0 H -10 L -20 -90 Q -60 -100 -60 -160 Z" fill="#F7F7F4" stroke={LINE} strokeWidth={5} strokeLinejoin="round" />
+      <ellipse cx={20} cy={-160} rx={80} ry={14} fill="#E8ECEA" stroke={LINE} strokeWidth={4} />
+    </g>
+    <Floor fill="#D9DCD6" />
+    <rect y={GROUND - 40} width={540} height={200} fill="url(#hatchLight)" />
+  </g>
+);
+
+const Office: React.FC<{ f: number }> = ({ f }) => (
+  <g>
+    <rect width={540} height={960} fill="#E7E3DA" />
+    <Window x={330} y={220} w={170} h={170} f={f} />
+    <g transform="translate(70 230)">
+      <rect width={150} height={110} fill="#F4EEE1" stroke={LINE} strokeWidth={4} />
+      <path d="M 20 85 L 50 50 L 75 65 L 110 25 L 130 40" fill="none" stroke="#C0392B" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M 18 95 H 132 M 18 95 V 15" stroke={LINE} strokeWidth={3} />
+    </g>
+    <rect x={0} y={GROUND - 210} width={540} height={18} fill="#B08A63" stroke={LINE} strokeWidth={4} />
+    <rect x={30} y={GROUND - 192} width={16} height={152} fill="#9B774F" stroke={LINE} strokeWidth={3} />
+    <rect x={494} y={GROUND - 192} width={16} height={152} fill="#9B774F" stroke={LINE} strokeWidth={3} />
+    {/* monitor */}
+    <g transform={`translate(400 ${GROUND - 210})`}>
+      <rect x={-80} y={-150} width={160} height={110} rx={8} fill="#2B2F33" stroke={LINE} strokeWidth={5} />
+      <rect x={-70} y={-140} width={140} height={90} fill="#8FB8DE" opacity={0.6 + 0.1 * Math.sin(f / 8)} />
+      <path d="M -10 -40 L -20 0 H 20 L 10 -40" fill="#9A9A9A" stroke={LINE} strokeWidth={4} />
+    </g>
+    <g transform={`translate(110 ${GROUND - 210})`}>
+      <path d="M -20 0 L -16 -40 H 16 L 20 0 Z" fill="#E9E2D4" stroke={LINE} strokeWidth={3.5} />
+      {[0, 1, 2].map((i) => (
+        <path key={i} d={`M ${-8 + i * 8} -46 q -6 -12 0 -24 q 6 -12 0 -24`} fill="none" stroke={LINE} strokeWidth={2.4} opacity={0.35 + 0.25 * Math.sin(f / 9 + i)} />
+      ))}
+    </g>
+    <Floor fill="#CFC6B6" />
+  </g>
+);
+
 export const SceneBackground: React.FC<{ scene: Scene; f: number }> = ({ scene, f }) => {
   switch (scene) {
     case "classroom":
@@ -211,6 +266,10 @@ export const SceneBackground: React.FC<{ scene: Scene; f: number }> = ({ scene, 
       return <Street f={f} />;
     case "kitchen":
       return <Kitchen f={f} />;
+    case "bathroom":
+      return <Bathroom f={f} />;
+    case "office":
+      return <Office f={f} />;
     default:
       return <Paper f={f} />;
   }

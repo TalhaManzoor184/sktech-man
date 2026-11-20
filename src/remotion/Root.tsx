@@ -5,6 +5,8 @@ import { FPS, HEIGHT, WIDTH, type EpisodeProps } from "../shared/episode";
 import { computeTimeline } from "../shared/timeline";
 import { Episode } from "./Episode";
 import { StoryTeaser, type TeaserProps } from "./StoryTeaser";
+import { Pantomime } from "./Pantomime";
+import { pantomimeFrames, type PantomimeProps } from "../shared/pantomime";
 import { ClipFrame, WeeklyHost, WeeklyThumb } from "./weekly/Weekly";
 import { WIDE_H, WIDE_W, type ClipFrameProps, type HostProps, type ThumbProps } from "../shared/weekly";
 
@@ -56,6 +58,34 @@ export const Root: React.FC = () => (
       calculateMetadata={({ props }) => {
         const p = props as unknown as EpisodeProps;
         return { durationInFrames: computeTimeline(p).totalFrames, fps: p.fps };
+      }}
+    />
+    {/* Pantomime meme: quick shots, big faces, almost no dialogue */}
+    <Composition
+      id="Pantomime"
+      component={Pantomime as unknown as React.FC<Record<string, unknown>>}
+      width={WIDTH}
+      height={HEIGHT}
+      fps={FPS}
+      durationInFrames={300}
+      defaultProps={
+        {
+          pov: "3 hours of sleep is totally fine",
+          scene: "office",
+          fps: FPS,
+          musicVolume: 0.25,
+          watermark: "@sketchman",
+          followText: "Follow for tomorrow's disaster",
+          shots: [
+            { shot: "wide", who: "sketch", focus: "sketch", expression: "exhausted", action: "idle", prop: "laptop", effect: "zzz", sfx: "snore", line: "", seconds: 1.6, duration: 1.6, words: [], mouthCues: [] },
+            { shot: "extreme", who: "sketch", focus: "sketch", expression: "exhausted", action: "idle", prop: "none", effect: "none", sfx: "none", line: "", seconds: 1.2, duration: 1.2, words: [], mouthCues: [] },
+            { shot: "silhouette", who: "both", focus: "bro", expression: "cool", otherExpression: "terrified", action: "idle", prop: "none", effect: "none", sfx: "boom", line: "", seconds: 1.4, duration: 1.4, words: [], mouthCues: [] },
+          ],
+        } satisfies PantomimeProps as unknown as Record<string, unknown>
+      }
+      calculateMetadata={({ props }) => {
+        const p = props as unknown as PantomimeProps;
+        return { durationInFrames: pantomimeFrames(p).total, fps: p.fps };
       }}
     />
     {/* Weekly long-form compilation (16:9) */}

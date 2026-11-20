@@ -93,6 +93,16 @@ Setup (once):
 (`is_ai_generated`). If any Facebook part fails, YouTube and the other parts still go out and the
 run is marked failed so you get an email.
 
+## Pantomime memes (experimental)
+
+`npm run pantomime` makes a different kind of Short: one line of text on screen, then 5–9 fast
+shots (wide, close-up, extreme close-up, peephole, dark silhouette) with over-the-top faces
+(exhausted, cryLaugh, terrified, embarrassed, furious), effects (tears, sweat, zzz, steam), meme
+sounds and background music, and at most two tiny spoken lines. It works with the sound off and
+in any language. Workflow modes: `pantomime-now` (public now) and `pantomime-preview` (render only).
+Music comes from `assets/music/` (two loops made by `scripts/make-music.py`; add licensed tracks
+there too). Try it with `npm run pantomime -- --sample --tts=espeak --no-upload`.
+
 ## Instagram: Reel + photo + Story
 
 The same three posts go to the Instagram account linked to the Facebook Page, through the

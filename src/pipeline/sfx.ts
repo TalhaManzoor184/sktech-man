@@ -8,6 +8,16 @@ import { ffmpeg } from "./audio";
  * Each is generated once per run into the render's public folder.
  */
 const RECIPES: Record<Exclude<Sfx, "none">, string[]> = {
+  // Slide whistle going up then down.
+  slide: ["-f", "lavfi", "-i", "aevalsrc='0.5*sin(2*PI*(500*t+900*t*t*if(lt(t,0.35),1,-0.6)))*min(1,8*t)*exp(-1.2*t)':s=44100:d=0.8", "-af", "lowpass=f=3000"],
+  // Cartoon boing: pitch wobble.
+  boing: ["-f", "lavfi", "-i", "aevalsrc='0.7*sin(2*PI*(180+60*sin(2*PI*14*t)*exp(-3*t))*t)*exp(-3.2*t)':s=44100:d=0.9"],
+  // Record scratch: fast swept noise.
+  scratch: ["-f", "lavfi", "-i", "anoisesrc=d=0.35:c=white:a=0.8", "-af", "bandpass=f=1800:width_type=o:w=2,vibrato=f=18:d=0.9,afade=t=out:st=0.2:d=0.15,volume=2"],
+  // Snore: low rumbling breath.
+  snore: ["-f", "lavfi", "-i", "anoisesrc=d=1.6:c=brown:a=0.9", "-af", "lowpass=f=420,volume='0.2+1.6*pow(sin(PI*t/1.6),4)':eval=frame,volume=2.2"],
+  heartbeat: ["-f", "lavfi", "-i", "aevalsrc='0.9*sin(2*PI*55*t)*(exp(-25*mod(t,0.8))+0.7*exp(-25*max(0,mod(t,0.8)-0.22))*gte(mod(t,0.8),0.22))':s=44100:d=1.6", "-af", "lowpass=f=200,volume=2"],
+  gulp: ["-f", "lavfi", "-i", "aevalsrc='0.8*sin(2*PI*(260-180*t/0.25)*t)*exp(-14*t)':s=44100:d=0.3"],
   // Deep "vine boom" style hit: falling sine + a little noise, long tail.
   boom: [
     "-f", "lavfi", "-i", "aevalsrc='0.95*sin(2*PI*(38+90*exp(-9*t))*t)*exp(-2.6*t)+0.25*(random(0)-0.5)*exp(-18*t)':s=44100:d=1.6",

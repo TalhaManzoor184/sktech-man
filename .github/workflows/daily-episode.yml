@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample: Reel saved as DRAFT, photo uploaded unpublished, no Story · facebook-now = new episode posted PUBLIC on Facebook right now (Reel + photo + Story) and on Instagram, no YouTube · instagram-now = new episode on Instagram only, right now"
+        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample: Reel saved as DRAFT, photo uploaded unpublished, no Story · facebook-now = new episode posted PUBLIC on Facebook right now (Reel + photo + Story) and on Instagram, no YouTube · instagram-now = new episode on Instagram only, right now · pantomime-now = new no-dialogue meme (fast shots, big faces) published PUBLIC now on YouTube/Facebook/Instagram · pantomime-preview = same, render only"
         type: choice
-        options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test, facebook-now, instagram-now]
+        options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test, facebook-now, instagram-now, pantomime-now, pantomime-preview]
         default: test
 
 permissions:
@@ -117,6 +117,8 @@ jobs:
             facebook-test) FACEBOOK_DRAFT=true npm run episode -- --sample --tts=espeak --facebook-only ;;
             facebook-now) FACEBOOK_PHOTO_DELAY_HOURS=0 npm run episode -- --facebook-only ;;
             instagram-now) FACEBOOK_REEL=false FACEBOOK_PHOTO=false FACEBOOK_STORY=false npm run episode -- --facebook-only ;;
+            pantomime-now) UPLOAD_MODE=public FACEBOOK_PHOTO_DELAY_HOURS=0 npm run pantomime ;;
+            pantomime-preview) npm run pantomime -- --no-upload ;;
             full)        npm run episode ;;
             *)           npm run episode -- --if-slot-free ;;
           esac

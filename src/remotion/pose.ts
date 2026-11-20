@@ -91,6 +91,15 @@ export function poseFor(action: Action, t: number): BodyPose {
         armR: { x: 80, y: -400 - h * 40, hand: "open" },
       };
     }
+    case "sleepwalk": {
+      // arms out in front, slow sway
+      const s = Math.sin(t * Math.PI * 1.2);
+      return { ...base, x: s * 6, tilt: s * 3, headTilt: 10 + s * 4, armL: { x: 104, y: -322, hand: "open" }, armR: { x: 104, y: -322, hand: "open" }, legL: Math.max(0, s) * 0.25, legR: Math.max(0, -s) * 0.25 };
+    }
+    case "tremble": {
+      const s = Math.sin(t * Math.PI * 22);
+      return { ...base, x: s * 3.5, headTilt: s * 2, shoulders: 6, armL: { x: 40, y: -250, hand: "fist" }, armR: { x: 40, y: -250, hand: "fist" } };
+    }
     case "idle":
     default:
       return base;

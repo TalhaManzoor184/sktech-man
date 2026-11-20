@@ -100,3 +100,31 @@ export async function renderHostSegment(props: import("../shared/weekly").HostPr
 export async function renderWideStill(id: "ClipFrame" | "WeeklyThumb", props: object, publicDir: string, png: string): Promise<void> {
   await still(publicDir, id, props as Record<string, unknown>, 0, png);
 }
+
+/** Pantomime meme (same output settings as the regular episodes). */
+export async function renderPantomime(props: import("../shared/pantomime").PantomimeProps, publicDir: string, outFile: string): Promise<void> {
+  const serveUrl = await serveUrlFor(publicDir);
+  const inputProps = props as unknown as Record<string, unknown>;
+  const composition = await selectComposition({ serveUrl, id: "Pantomime", inputProps, browserExecutable: config.chromePath });
+  let lastPct = -10;
+  await renderMedia({
+    serveUrl,
+    composition,
+    inputProps,
+    codec: "h264",
+    crf: 18,
+    gopSize: 60,
+    pixelFormat: "yuv420p",
+    colorSpace: "bt709",
+    audioBitrate: "192k",
+    outputLocation: outFile,
+    browserExecutable: config.chromePath,
+    onProgress: ({ progress }) => {
+      const pct = Math.floor(progress * 100);
+      if (pct >= lastPct + 20) {
+        lastPct = pct;
+        console.log(`  render ${pct}%`);
+      }
+    },
+  });
+}
