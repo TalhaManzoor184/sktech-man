@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample: Reel saved as DRAFT, photo uploaded unpublished, no Story · facebook-now = new episode posted PUBLIC on Facebook right now (Reel + photo + Story) and on Instagram, no YouTube · instagram-now = new episode on Instagram only, right now · pantomime-now = new no-dialogue meme (fast shots, big faces) published PUBLIC now on YouTube/Facebook/Instagram · pantomime-preview = same, render only"
+        description: "full = real episode, public at the next free PUBLISH_TIME slot · publish-now = public immediately · private-upload = real episode uploaded PRIVATE (never goes public by itself) · no-upload = real episode, no YouTube · test = sample script + robot voices, needs no keys · upload-test = sample uploaded PRIVATE (YouTube) and as a DRAFT (Facebook), checks keys · facebook-test = sample: Reel saved as DRAFT, photo uploaded unpublished, no Story · facebook-now = new episode posted PUBLIC on Facebook right now (Reel + photo + Story) and on Instagram, no YouTube · instagram-now = new episode on Instagram only, right now · pantomime-now = new no-dialogue meme (fast shots, big faces) published PUBLIC now on YouTube/Facebook/Instagram · pantomime-preview = same, render only · video-now = post a ready-made MP4 PUBLIC now (script = its meta json, e.g. data/reels/exam-eye-contact.json)"
         type: choice
-        options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test, facebook-now, instagram-now, pantomime-now, pantomime-preview]
+        options: [full, private-upload, publish-now, no-upload, test, upload-test, facebook-test, facebook-now, instagram-now, pantomime-now, pantomime-preview, video-now]
         default: test
       script:
         description: "pantomime modes only: a hand-written shot list in the repo, e.g. data/scripts/candy.json (empty = Gemini writes one)"
@@ -123,6 +123,7 @@ jobs:
             facebook-now) FACEBOOK_PHOTO_DELAY_HOURS=0 npm run episode -- --facebook-only ;;
             instagram-now) FACEBOOK_REEL=false FACEBOOK_PHOTO=false FACEBOOK_STORY=false npm run episode -- --facebook-only ;;
             pantomime-now) UPLOAD_MODE=public FACEBOOK_PHOTO_DELAY_HOURS=0 npm run pantomime -- ${SCRIPT_FILE:+--script=$SCRIPT_FILE} ;;
+            video-now) UPLOAD_MODE=public npm run post-video -- --meta=$SCRIPT_FILE ;;
             pantomime-preview) npm run pantomime -- --no-upload ${SCRIPT_FILE:+--script=$SCRIPT_FILE} ;;
             full)        npm run episode ;;
             *)           npm run episode -- --if-slot-free ;;

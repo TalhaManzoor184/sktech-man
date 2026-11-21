@@ -9,6 +9,7 @@
     "episode": "tsx src/pipeline/run.ts",
     "weekly": "tsx src/pipeline/weekly.ts",
     "pantomime": "tsx src/pipeline/pantomime.ts",
+    "post-video": "tsx src/pipeline/postVideo.ts",
     "episode:sample": "tsx src/pipeline/run.ts --sample --tts=espeak --no-upload",
     "auth:youtube": "tsx src/scripts/get-refresh-token.ts",
     "auth:facebook": "tsx src/scripts/facebook-auth.ts",
